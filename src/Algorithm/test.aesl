@@ -1,0 +1,37 @@
+<!DOCTYPE aesl-source>
+<network>
+
+<!--list of global events-->
+<event size="10" name="SetColor"/>
+<event size="1" name="PlaySound"/>
+<event size="1" name="PlayFreq"/>
+
+<!--list of constants-->
+<constant value="50" name="TIME_STEP"/>
+
+<!--show keywords state-->
+<keywords flag="true"/>
+
+<!--node thymio-II-->
+<node nodeId="1" name="thymio-II">
+
+onevent SetColor
+call leds.top(event.args[0], event.args[1], event.args[2])
+call leds.bottom.left(event.args[   0], event.args[1], event.args[2])
+call leds.bottom.right(event.args[0], event.args[1], event.args[2])
+call leds.circle(event.args[0], event.args[1], event.args[2],event.args[0], event.args[1], event.args[2], event.args[0], event.args[1])
+call leds.prox.h(event.args[0], event.args[1], event.args[2],event.args[0], event.args[1], event.args[2], event.args[0], event.args[1])
+call leds.prox.v(event.args[0], event.args[1])
+call leds.buttons(event.args[0], event.args[1], event.args[0], event.args[1])
+call leds.rc(event.args[0])
+call leds.sound(event.args[1])
+call leds.temperature(event.args[1], event.args[0])
+
+onevent PlaySound
+call sound.system(event.args[0])
+
+onevent PlayFreq
+call sound.freq(event.args[0], event.args[1])
+</node>
+
+</network>
