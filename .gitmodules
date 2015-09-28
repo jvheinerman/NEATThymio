@@ -1,0 +1,3 @@
+[submodule "lib/peas"]
+	path = lib/peas
+	url = https://github.com/noio/peas.git
