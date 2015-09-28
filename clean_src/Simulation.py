@@ -212,25 +212,7 @@ class Simulation(threading.Thread):
 
         return fitness
 
-    def __runAndEvaluateForOneTimeStep(self, evaluee):
-        # Read sensors: request to ThymioController
-        self.__thymioController.readSensorsRequest()
-        self.__waitForControllerResponse()
-        psValues = self.__thymioController.getPSValues()
-
-        psValues = [psValues[0], psValues[2], psValues[4], psValues[5], psValues[6]]
-
-        # return presence value from camera
-        presence_box = self.__threadCamera.readPuckPresence()
-        presence_goal = self.__threadCamera.readGoalPresence()
-        totalPresence = presence_box + presence_goal
-        for i in range(len(totalPresence)):
-            threshold = 1500 if i == 3 else 2000  # for bottom part better higher threshold
-            if totalPresence[i] > threshold:
-                totalPresence[i] = 1
-            else:
-                totalPresence[i] = 0
-
+    def _runNetwork(self, evaluee):
         motorspeed = [0, 0]
 
         # Neural networks
@@ -289,6 +271,29 @@ class Simulation(threading.Thread):
         # Set motorspeed
         motorspeed[LEFT] = int(left * pr.real_max_speed)
         motorspeed[RIGHT] = int(right * pr.real_max_speed)
+
+        return motorspeed
+
+    def __runAndEvaluateForOneTimeStep(self, evaluee):
+        # Read sensors: request to ThymioController
+        self.__thymioController.readSensorsRequest()
+        self.__waitForControllerResponse()
+        psValues = self.__thymioController.getPSValues()
+
+        psValues = [psValues[0], psValues[2], psValues[4], psValues[5], psValues[6]]
+
+        # return presence value from camera
+        presence_box = self.__threadCamera.readPuckPresence()
+        presence_goal = self.__threadCamera.readGoalPresence()
+        totalPresence = presence_box + presence_goal
+        for i in range(len(totalPresence)):
+            threshold = 1500 if i == 3 else 2000  # for bottom part better higher threshold
+            if totalPresence[i] > threshold:
+                totalPresence[i] = 1
+            else:
+                totalPresence[i] = 0
+
+        motorspeed = self._runNetwork(evaluee)
 
         if (motorspeed[LEFT] != self.__previous_motor_speed[LEFT]) or (
                     motorspeed[RIGHT] != self.__previous_motor_speed[RIGHT]):
