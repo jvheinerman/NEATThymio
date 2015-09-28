@@ -5,22 +5,6 @@ import traceback
 import pickle
 import struct
 
-def recvall(conn, count):
-    buf = b''
-    while count:
-        newbuf = conn.recv(count)
-        if not newbuf: return None
-        buf += newbuf
-        count -= len(newbuf)
-    return buf
-
-
-def recvOneMessage(socket):
-    lengthbuf = recvall(socket, 4)
-    length, = struct.unpack('!I', lengthbuf)
-    data = pickle.loads(recvall(socket, length))
-    return data
-
 
 # Waits for incoming messages on one socket and stores them in the shared inbox
 class MessageReceiver(threading.Thread):
@@ -33,6 +17,24 @@ class MessageReceiver(threading.Thread):
         self.__isSocketAlive = threading.Condition()
         self.__isStopped = threading.Event()
         self.__simLogger = simulationLogger
+
+    @staticmethod
+    def recvall(conn, count):
+        buf = b''
+        while count:
+            newbuf = conn.recv(count)
+            if not newbuf: return None
+            buf += newbuf
+            count -= len(newbuf)
+        return buf
+
+
+    @staticmethod
+    def recvOneMessage(socket):
+        lengthbuf = MessageReceiver.recvall(socket, 4)
+        length, = struct.unpack('!I', lengthbuf)
+        data = pickle.loads(MessageReceiver.recvall(socket, length))
+        return data
 
     @property
     def ipAddress(self):
@@ -66,13 +68,13 @@ class MessageReceiver(threading.Thread):
                     if self.__stopSocket in readable:
                         # 	Received a message (stop) from localhost
                         self.__simLogger.debug('Receiver - ' + self.__ipAddress + ' - StopSocket is in readable')
-                        data = recvOneMessage(self.__stopSocket)
+                        data = MessageReceiver.recvOneMessage(self.__stopSocket)
                         self.__simLogger.debug('Received ' + data)
                     elif self.__connectionSocket in readable:
                         self.__simLogger.debug('Receiver - ' + self.__ipAddress + ' - ConnectionSocket is in readable')
                         # 	Received a message from remote host
                         try:
-                            data = recvOneMessage(self.__connectionSocket)
+                            data = MessageReceiver.recvOneMessage(self.__connectionSocket)
                             self.__simLogger.debug('Receiver - ' + self.__ipAddress + ' - Received ' + str(data))
                             if data and not self.__stopped():
                                 # self.__simLogger.debug('Receiver - ' + self.__ipAddress + ' - Appending ' + str(data))

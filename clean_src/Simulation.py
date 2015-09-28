@@ -14,14 +14,14 @@ import pickle
 
 import parameters as pr
 import classes as cl
-import ConfigParser
-import CameraVision
-import Inbox
-import ConnectionsListener
-import MessageSender
-import MessageReceiver
+from ConfigParser import *
+from CameraVision import *
+from Inbox import *
+from ConnectionsListener import *
+from MessageSender import *
+from MessageReceiver import *
+from helpers import *
 
-RAND_MAX = sys.maxint
 LEFT = 0
 RIGHT = 1
 
@@ -37,36 +37,6 @@ COMMANDS_LISTENER_HOST = ''
 COMMANDS_LISTENER_PORT = 54321
 OUTPUT_FILE_RECEIVER_PORT = 23456  # 23456  # 24537
 EOF_REACHED = 'EOF_REACHED'
-
-def mkdir_p(path):
-    try:
-        os.makedirs(path)
-    except OSError as exc:  # Python >2.5
-        if exc.errno == errno.EEXIST and os.path.isdir(path):
-            pass
-        else:
-            raise
-
-# Uniform distribution (0..1]
-def drand():
-    return random.randint(0, RAND_MAX) / float(RAND_MAX + 1)
-
-# Normal distribution, centered on 0, std dev 1
-def random_normal():
-    return -2 * math.log(drand())
-
-# Used because else webots gives a strange segfault during cross compilation
-def sqrt_rand_normal():
-    return math.sqrt(random_normal())
-
-def gaussrand():
-    return sqrt_rand_normal() * math.cos(2 * math.pi * drand())
-
-def sendOneMessage(conn, data):
-    packed_data = pickle.dumps(data)
-    length = len(packed_data)
-    conn.sendall(struct.pack('!I', length))
-    conn.sendall(packed_data)
 
 
 # Simulation class -> neural network, fitness function, individual/social learning

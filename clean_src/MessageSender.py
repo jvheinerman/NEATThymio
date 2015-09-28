@@ -5,12 +5,6 @@ import traceback
 import pickle
 import struct
 
-def sendOneMessage(conn, data):
-    packed_data = pickle.dumps(data)
-    length = len(packed_data)
-    conn.sendall(struct.pack('!I', length))
-    conn.sendall(packed_data)
-
 
 # Sends outgoing messages to the remote host
 class MessageSender(threading.Thread):
@@ -23,6 +17,12 @@ class MessageSender(threading.Thread):
         self.__connectionSocket = None
         self.__isStopped = threading.Event()
         self.__simLogger = simulationLogger
+
+    def sendOneMessage(conn, data):
+        packed_data = pickle.dumps(data)
+        length = len(packed_data)
+        conn.sendall(struct.pack('!I', length))
+        conn.sendall(packed_data)
 
     @property
     def ipAddress(self):

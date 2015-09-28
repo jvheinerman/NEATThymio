@@ -7,7 +7,7 @@ import os
 import threading
 
 import classes as cl
-import CommandsListener
+from CommandsListener import *
 
 CURRENT_FILE_PATH = os.path.abspath(os.path.dirname(__file__))
 AESL_PATH = os.path.join(CURRENT_FILE_PATH, 'asebaCommands.aesl')

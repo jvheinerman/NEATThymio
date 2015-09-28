@@ -6,28 +6,14 @@ import struct
 import pickle
 
 import parameters as pr
-import Simulation
+from Simulation import *
+from MessageReceiver import *
 
 COMMANDS_LISTENER_HOST = ''
 COMMANDS_LISTENER_PORT = 54321
 LOCALHOST = '127.0.0.1'
 PC_FIXED_IP = '192.168.1.100'
 TRUSTED_CLIENTS = [LOCALHOST, PC_FIXED_IP]
-
-def recvall(conn, count):
-    buf = b''
-    while count:
-        newbuf = conn.recv(count)
-        if not newbuf: return None
-        buf += newbuf
-        count -= len(newbuf)
-    return buf
-
-def recvOneMessage(socket):
-    lengthbuf = recvall(socket, 4)
-    length, = struct.unpack('!I', lengthbuf)
-    data = pickle.loads(recvall(socket, length))
-    return data
 
 
 # Control command listener
@@ -59,7 +45,7 @@ class CommandsListener(threading.Thread):
 
                 # Receive one message
                 self.__mainLogger.debug('CommandListener - Receiving command...')
-                recvOptions = recvOneMessage(conn)
+                recvOptions = MessageReceiver.recvOneMessage(conn)
                 self.__mainLogger.debug('CommandListener - Received ' + str(recvOptions))
 
                 if recvOptions.kill:
