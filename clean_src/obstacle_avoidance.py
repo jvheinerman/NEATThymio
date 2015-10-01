@@ -19,9 +19,12 @@ class ObstacleAvoidance(object):
 			fitness += self.__step(evaluee)
 			# print "Fitness at time %d: %d" % (i, fitness)
 
-		print "Fitness at end: %d" % fitness
+		# print "Fitness at end: %d" % fitness
 
 		return { 'fitness': fitness }
+
+	def solve(self, evaluee):
+		return int(self.evaluate(evaluee)['fitness'] > 1000)
 
 	def __step(self, evaluee):
 		# Read sensors: request to ThymioController
@@ -61,6 +64,6 @@ class ObstacleAvoidance(object):
 if __name__ == '__main__':
 	from peas.methods.neat import NEATPopulation, NEATGenotype
 	genotype = lambda: NEATGenotype(inputs=5, outputs=2)
-	pop = NEATPopulation(genotype, popsize=150)
+	pop = NEATPopulation(genotype, popsize=20)
 	task = ObstacleAvoidance()
 	pop.epoch(generations=100, evaluator=task, solution=task)
