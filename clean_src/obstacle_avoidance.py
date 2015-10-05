@@ -1,7 +1,10 @@
 import numpy as np
+import os
+import errno
 import parameters as pr
 import classes
 from Simulation import *
+from ThymioController import *
 from peas.networks.rnn import NeuralNetwork
 
 
@@ -10,8 +13,6 @@ class ObstacleAvoidance(Simulation):
 
 	def __init__(self, thymioController, debug, experiment_name):
 		super(ObstacleAvoidance, self).__init__(thymioController, debug, experiment_name)
-		self.arg = arg
-		pass
 
 	def evaluate(self, evaluee):
 		fitness = 0
@@ -28,9 +29,9 @@ class ObstacleAvoidance(Simulation):
 
 	def __step(self, evaluee):
 		# Read sensors: request to ThymioController
-		self.__thymioController.readSensorsRequest()
-		self.__waitForControllerResponse()
-		psValues = self.__thymioController.getPSValues()
+		self.thymioController.readSensorsRequest()
+		self.waitForControllerResponse()
+		psValues = self.thymioController.getPSValues()
 		psValues = np.array([psValues[0], psValues[2], psValues[4], psValues[5], psValues[6]])
 		# psValues = np.random.standard_normal(5)
 
@@ -38,8 +39,8 @@ class ObstacleAvoidance(Simulation):
 
 		motorspeed = { 'left': left, 'right': right }
 
-		self.__thymioController.writeMotorspeedRequest((left, right))
-		self.__waitForControllerResponse()
+		self.thymioController.writeMotorspeedRequest((left, right))
+		self.waitForControllerResponse()
 
 		return self.getFitness(motorspeed, psValues)
 
@@ -91,7 +92,7 @@ if __name__ == '__main__':
 	mainLogger.addHandler(mainHandler)
 	thymioController = ThymioController(mainLogger)
 	
-	debug = true
+	debug = True
 	experiment_name = 'Experiment 001'
 	task = ObstacleAvoidance(thymioController, debug, experiment_name)
 	

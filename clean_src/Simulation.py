@@ -46,7 +46,7 @@ class Simulation(threading.Thread):
         config = ConfigParser(CONFIG_PATH)
         self.__address = config.address
         self.__port = config.port
-        self.__thymioController = thymioController
+        self.thymioController = thymioController
         self.__tcPerformedAction = threading.Condition()
         self.__tcPA = False
         self.__msgSenders = dict()
@@ -89,7 +89,7 @@ class Simulation(threading.Thread):
             self.__tcPA = True
             self.__tcPerformedAction.notify()
 
-    def __waitForControllerResponse(self):
+    def waitForControllerResponse(self):
         # Wait for ThymioController response
         with self.__tcPerformedAction:
             while not self.__tcPA:
@@ -276,9 +276,9 @@ class Simulation(threading.Thread):
 
     def __runAndEvaluateForOneTimeStep(self, evaluee):
         # Read sensors: request to ThymioController
-        self.__thymioController.readSensorsRequest()
-        self.__waitForControllerResponse()
-        psValues = self.__thymioController.getPSValues()
+        self.thymioController.readSensorsRequest()
+        self.waitForControllerResponse()
+        psValues = self.thymioController.getPSValues()
 
         psValues = [psValues[0], psValues[2], psValues[4], psValues[5], psValues[6]]
 
@@ -298,8 +298,8 @@ class Simulation(threading.Thread):
         if (motorspeed[LEFT] != self.__previous_motor_speed[LEFT]) or (
                     motorspeed[RIGHT] != self.__previous_motor_speed[RIGHT]):
             # Set motor speed: request to ThymioController only if the values are different from previous one
-            self.__thymioController.writeMotorspeedRequest(motorspeed)
-            self.__waitForControllerResponse()
+            self.thymioController.writeMotorspeedRequest(motorspeed)
+            self.waitForControllerResponse()
             # self.__simLogger.info("Simulation - Set motorspeed " + str(motorspeed)[1:-1])
 
         # remember previous motor speed
@@ -336,9 +336,9 @@ class Simulation(threading.Thread):
         if total_area_goal > 15000 and normalized_fitness_box_pushing == 1:
             found = True
             # Make sound
-            self.__thymioController.soundRequest(
+            self.thymioController.soundRequest(
                         [cl.SOUND])  # system sound -> value from 0 to 7 (4 = free-fall (scary) sound)
-            self.__waitForControllerResponse()
+            self.waitForControllerResponse()
             # print goal
             self.__simLogger.info("GOAL REACHED\t")
 
@@ -367,11 +367,11 @@ class Simulation(threading.Thread):
             self.__msgSenders[addr].start()
 
         # Wait for the simulation to be set on the controller
-        self.__waitForControllerResponse()
+        self.waitForControllerResponse()
 
         # Set color: request to ThymioController
-        self.__thymioController.writeColorRequest([0, 0, 0, 0])  # Switch off all the leds
-        self.__waitForControllerResponse()
+        self.thymioController.writeColorRequest([0, 0, 0, 0])  # Switch off all the leds
+        self.waitForControllerResponse()
 
         # Starting CPU timer -> for temperature
         t_start = time.clock()
@@ -543,9 +543,9 @@ class Simulation(threading.Thread):
 
                     # Retrieve temperature value
                     # Read sensors: request to ThymioController
-                    self.__thymioController.readTemperatureRequest()
-                    self.__waitForControllerResponse()
-                    temperature = self.__thymioController.getTemperature()
+                    self.thymioController.readTemperatureRequest()
+                    self.waitForControllerResponse()
+                    temperature = self.thymioController.getTemperature()
                     # second from start
                     t_from_start = time.clock() - t_start
                     # Write temp output: open file to append the values
@@ -589,7 +589,7 @@ class Simulation(threading.Thread):
             except Exception as e:
                 self.__simLogger.critical("Some exception: " + str(e) + str(
                     sys.exc_info()[0]) + ' - ' + traceback.format_exc())
-                self.__thymioController.stopThymioRequest()
+                self.thymioController.stopThymioRequest()
                 break
 
             self.__simLogger.info("End of while loop: " + str(evals) + " >= " + str(pr.total_evals))
@@ -613,7 +613,7 @@ class Simulation(threading.Thread):
                          self.__simulationWeightOutputFile)
 
         # Stop Thymio from moving
-        self.__thymioController.stopThymioRequest()
+        self.thymioController.stopThymioRequest()
 
         # Stopping all the message senders: no more outgoing messages
         for addr in self.__msgSenders:
