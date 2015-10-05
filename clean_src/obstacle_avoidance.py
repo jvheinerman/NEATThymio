@@ -7,6 +7,7 @@ from Simulation import *
 from ThymioController import *
 from peas.networks.rnn import NeuralNetwork
 
+fitness = 0
 
 
 class ObstacleAvoidance(Simulation):
@@ -20,9 +21,10 @@ class ObstacleAvoidance(Simulation):
 		fitness = 0
 		loop = gobject.MainLoop()
 		def update_fitness(fit):
-			global fitness
 			fitness += fit
-		handle = gobject.timeout_add(100, lambda: self.__step(evaluee, update_fitness))  # every 0.1 sec
+		def main_lambda():
+			self.__step(evaluee, update_fitness)
+		handle = gobject.timeout_add(100, main_lambda)  # every 0.1 sec
 		loop.run()
 
 		# fitness = 0
@@ -45,6 +47,9 @@ class ObstacleAvoidance(Simulation):
 		# psValues = np.array([psValues[0], psValues[2], psValues[4], psValues[5], psValues[6]])
 		# psValues = np.random.standard_normal(5)
 		def ok_call(psValues):
+			# psValues = np.array([int(x) for x in psValues])
+			psValues = np.array([psValues[0], psValues[2], psValues[4], psValues[5], psValues[6]])
+
 			left, right = list(NeuralNetwork(evaluee).feed(psValues)[-2:])
 
 			motorspeed = { 'left': left, 'right': right }
@@ -134,8 +139,8 @@ if __name__ == '__main__':
 	dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 	bus = dbus.SessionBus()
 	thymioController = dbus.Interface(bus.get_object('ch.epfl.mobots.Aseba', '/'), dbus_interface='ch.epfl.mobots.AsebaNetwork')
-	print robot.GetNodesList()
-    thymioController.LoadScripts(AESL_PATH, reply_handler=dbusReply, error_handler=dbusError)
+	print thymioController.GetNodesList()
+	thymioController.LoadScripts(AESL_PATH, reply_handler=dbusReply, error_handler=dbusError)
 
 	# debug = True
 	# experiment_name = 'Experiment 001'
