@@ -1,16 +1,16 @@
 import numpy as np
 import parameters as pr
 import classes
-# from Simulation import *
+from Simulation import *
 from peas.networks.rnn import NeuralNetwork
 
 
 
-class ObstacleAvoidance(Simiulation):
+class ObstacleAvoidance(Simulation):
 
-	def __init__(self):
-		# super(ObstacleAvoidance, self).__init__()
-		# self.arg = arg
+	def __init__(self, thymioController, debug, experiment_name):
+		super(ObstacleAvoidance, self).__init__(thymioController, debug, experiment_name)
+		self.arg = arg
 		pass
 
 	def evaluate(self, evaluee):
@@ -39,7 +39,7 @@ class ObstacleAvoidance(Simiulation):
 		motorspeed = { 'left': left, 'right': right }
 
 		self.__thymioController.writeMotorspeedRequest((left, right))
-        self.__waitForControllerResponse()
+		self.__waitForControllerResponse()
 
 		return self.getFitness(motorspeed, psValues)
 
@@ -69,5 +69,18 @@ if __name__ == '__main__':
 	from peas.methods.neat import NEATPopulation, NEATGenotype
 	genotype = lambda: NEATGenotype(inputs=5, outputs=2)
 	pop = NEATPopulation(genotype, popsize=20)
-	task = ObstacleAvoidance()
+
+	# Main logger for ThymioController and CommandsListener
+    mainLogger = logging.getLogger('mainLogger')
+    mainLogger.setLevel(logging.DEBUG)
+    mainLogFilename = getNextIDPath(MAIN_LOG_PATH) + '_' + time.strftime("%Y-%m-%d_%H-%M-%S") + '_main_debug.log'
+    mainHandler = logging.FileHandler(os.path.join(MAIN_LOG_PATH, mainLogFilename))
+    mainHandler.setFormatter(FORMATTER)
+    mainLogger.addHandler(mainHandler)
+	thymioController = ThymioController(mainLogger)
+	
+	debug = true
+	experiment_name = 'Experiment 001'
+	task = ObstacleAvoidance(thymioController, debug, experiment_name)
+	
 	pop.epoch(generations=100, evaluator=task, solution=task)
