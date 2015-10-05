@@ -1,6 +1,5 @@
 import numpy as np
 import os
-import errno
 import parameters as pr
 import classes
 from Simulation import *
@@ -90,7 +89,12 @@ if __name__ == '__main__':
 	mainHandler = logging.FileHandler(os.path.join(MAIN_LOG_PATH, mainLogFilename))
 	mainHandler.setFormatter(FORMATTER)
 	mainLogger.addHandler(mainHandler)
+
+	gobject.threads_init()
+	dbus.mainloop.glib.threads_init()
+
 	thymioController = ThymioController(mainLogger)
+	thymioController.run()
 	
 	debug = True
 	experiment_name = 'Experiment 001'

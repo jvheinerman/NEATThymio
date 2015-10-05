@@ -1,4 +1,4 @@
-import sys
+import sys, os, errno
 
 RAND_MAX = sys.maxint
 LEFT = 0
