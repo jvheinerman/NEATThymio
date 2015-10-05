@@ -6,7 +6,7 @@ from peas.networks.rnn import NeuralNetwork
 
 
 
-class ObstacleAvoidance(object):
+class ObstacleAvoidance(Simiulation):
 
 	def __init__(self):
 		# super(ObstacleAvoidance, self).__init__()
@@ -28,15 +28,19 @@ class ObstacleAvoidance(object):
 
 	def __step(self, evaluee):
 		# Read sensors: request to ThymioController
-		# self.__thymioController.readSensorsRequest()
-		# self.__waitForControllerResponse()
-		# psValues = self.__thymioController.getPSValues()
-		# psValues = np.array([psValues[0], psValues[2], psValues[4], psValues[5], psValues[6]])
-		psValues = np.random.standard_normal(5)
+		self.__thymioController.readSensorsRequest()
+		self.__waitForControllerResponse()
+		psValues = self.__thymioController.getPSValues()
+		psValues = np.array([psValues[0], psValues[2], psValues[4], psValues[5], psValues[6]])
+		# psValues = np.random.standard_normal(5)
 
 		left, right = list(NeuralNetwork(evaluee).feed(psValues)[-2:])
 
 		motorspeed = { 'left': left, 'right': right }
+
+		self.__thymioController.writeMotorspeedRequest((left, right))
+        self.__waitForControllerResponse()
+
 		return self.getFitness(motorspeed, psValues)
 
 	def getFitness(self, motorspeed, observation):

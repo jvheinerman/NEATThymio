@@ -1,3 +1,5 @@
+import sys
+
 RAND_MAX = sys.maxint
 LEFT = 0
 RIGHT = 1
