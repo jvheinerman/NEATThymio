@@ -1,5 +1,6 @@
 import numpy as np
 import os
+import time
 import parameters as pr
 import classes
 from Simulation import *
@@ -17,11 +18,19 @@ class ObstacleAvoidance(Simulation):
 
 	def evaluate(self, evaluee):
 		fitness = 0
-		for i in range(0, pr.eval_time):
-			self.__step(evaluee, lambda partial_fitness: global fitness += partial_fitness)
-			print "Fitness at time %d: %d" % (i, fitness)
+		loop = gobject.MainLoop()
+		def update_fitness(fit):
+			global fitness
+			fitness += fit
+		handle = gobject.timeout_add(100, lambda: self.__step(evaluee, update_fitness))  # every 0.1 sec
+		loop.run()
 
-		print "Fitness at end: %d" % fitness
+		# fitness = 0
+		# for i in range(0, pr.eval_time):
+		# 	self.__step(evaluee, lambda partial_fitness: fitness += partial_fitness)
+		# 	print "Fitness at time %d: %d" % (i, fitness)
+
+		# print "Fitness at end: %d" % fitness
 
 		return { 'fitness': fitness }
 
@@ -46,7 +55,12 @@ class ObstacleAvoidance(Simulation):
 
 			callback(self.getFitness(motorspeed, psValues))
 
-		getProxReadings(self.thymioController, ok_call, lambda: print 'error')
+		def nok_call():
+			print " Error while reading proximity sensors"
+
+		getProxReadings(self.thymioController, ok_call, nok_call)
+
+		time.sleep(0.1)
 
 	def getFitness(self, motorspeed, observation):
 		# Calculate penalty for rotating
@@ -74,6 +88,7 @@ class ObstacleAvoidance(Simulation):
 
 CURRENT_FILE_PATH = os.path.abspath(os.path.dirname(__file__))
 MAIN_LOG_PATH = os.path.join(CURRENT_FILE_PATH, 'log_main')
+AESL_PATH = os.path.join(CURRENT_FILE_PATH, 'asebaCommands.aesl')
 
 def getNextIDPath(path):
 	nextID = 0
@@ -83,11 +98,20 @@ def getNextIDPath(path):
 	return str(nextID)
 
 def writeMotorSpeed(controller, motorspeed):
-	controller.SetVariable("thymio-II", "motor.left.target", motorspeed['left'])
-	controller.SetVariable("thymio-II", "motor.right.target", motorspeed['right'])
+	controller.SetVariable("thymio-II", "motor.left.target", [motorspeed['left']])
+	controller.SetVariable("thymio-II", "motor.right.target", [motorspeed['right']])
+
 
 def getProxReadings(controller, ok_callback, nok_callback):
 	controller.GetVariable("thymio-II", "prox.horizontal", reply_handler=ok_callback, error_handler=nok_callback)
+
+def dbusReply():
+    pass
+
+
+def dbusError(e):
+    print 'error %s'
+    print str(e)
 
 if __name__ == '__main__':
 	from peas.methods.neat import NEATPopulation, NEATGenotype
@@ -107,8 +131,12 @@ if __name__ == '__main__':
 
 	# thymioController = ThymioController(mainLogger)
 	# thymioController.run()
+	dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+	bus = dbus.SessionBus()
 	thymioController = dbus.Interface(bus.get_object('ch.epfl.mobots.Aseba', '/'), dbus_interface='ch.epfl.mobots.AsebaNetwork')
-	
+	print robot.GetNodesList()
+    thymioController.LoadScripts(AESL_PATH, reply_handler=dbusReply, error_handler=dbusError)
+
 	# debug = True
 	# experiment_name = 'Experiment 001'
 	# task = ObstacleAvoidance(thymioController, debug, experiment_name)
