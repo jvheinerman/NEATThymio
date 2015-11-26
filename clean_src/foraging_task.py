@@ -1,53 +1,47 @@
-# -*- coding: utf-8 -*-
+from helpers import *
+from neat_task import NEATTask
+from CameraVision import *
+from peas.networks.rnn import NeuralNetwork
 
-import numpy as np
-import os
-import time
 import gobject
 import glib
 import dbus
 import dbus.mainloop.glib
-import logging
-import pickle
-import parameters as pr
-import classes
-from helpers import *
-from peas.networks.rnn import NeuralNetwork
 
 EVALUATIONS = 1000
+MAX_MOTOR_SPEED = 300
 TIME_STEP = 0.005
 ACTIVATION_FUNC = 'tanh'
 POPSIZE = 1
 GENERATIONS = 100
 SOLVED_AT = EVALUATIONS * 2
-EXPERIMENT_NAME = 'NEAT_obstacle_avoidance'
+EXPERIMENT_NAME = 'NEAT_foraging_task'
 
 CURRENT_FILE_PATH = os.path.abspath(os.path.dirname(__file__))
-MAIN_LOG_PATH = os.path.join(CURRENT_FILE_PATH, 'log_main')
-OUTPUT_PATH = os.path.join(CURRENT_FILE_PATH, 'output')
-PICKLED_DIR = os.path.join(CURRENT_FILE_PATH, 'pickled')
-FORMATTER = logging.Formatter('%(asctime)s - %(levelname)s: %(message)s')
 AESL_PATH = os.path.join(CURRENT_FILE_PATH, 'asebaCommands.aesl')
 
+class ForagingTask(NEATTask):
 
-class ObstacleAvoidance(NEATTask):
-
+	def __init__(self, thymioController, debug=False, experimentName='NEAT_task', evaluations=1000, timeStep=0.005, activationFunction='tanh', popSize=1, generations=100, solvedAt=1000):
+		NEATTask.__init__(self, thymioController, debug, experimentName, evaluations, timeStep, activationFunction, popSize, generations, solvedAt)
+		self.camera = CameraVision(False, self.logger)
+		print('Camera initialized')
+		
 	def _step(self, evaluee, callback):
-		def ok_call(psValues):
-			psValues = np.array([psValues[0], psValues[2], psValues[4], psValues[5], psValues[6], 1])
+		presence_box = self.camera.readPuckPresence()
+		presence_goal = self.camera.readGoalPresence()
+		presence = presence_box + presence_goal
+		print('presence: ' + str(presence))
 
-			left, right = list(NeuralNetwork(evaluee).feed(psValues)[-2:])
+		inputs = np.hstack((presence, 1))
 
-			motorspeed = { 'left': left, 'right': right }
+		out = NeuralNetwork(evaluee).feed(inputs)
+		print(out)
+		left, right = list(out[-2:])
+		motorspeed = { 'left': left, 'right': right }
+		writeMotorSpeed(self.thymioController, motorspeed)
 
-			writeMotorSpeed(self.thymioController, motorspeed)
-
-			callback(self.getFitness(motorspeed, psValues))
-
-		def nok_call():
-			print " Error while reading proximity sensors"
-
-		getProxReadings(self.thymioController, ok_call, nok_call)
+		callback(self.getFitness(motorspeed, inputs))
 		return True
 
 	def getFitness(self, motorspeed, observation):
@@ -75,7 +69,7 @@ class ObstacleAvoidance(NEATTask):
 
 if __name__ == '__main__':
 	from peas.methods.neat import NEATPopulation, NEATGenotype
-	genotype = lambda: NEATGenotype(inputs=6, outputs=2, types=[ACTIVATION_FUNC])
+	genotype = lambda: NEATGenotype(inputs=9, outputs=2, types=[ACTIVATION_FUNC])
 	pop = NEATPopulation(genotype, popsize=POPSIZE)
 
 	dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
@@ -87,7 +81,7 @@ if __name__ == '__main__':
 	thymioController.SendEventName('SetColor', [0, 0, 0, 0], reply_handler=dbusReply, error_handler=dbusError)
 
 	debug = True
-	task = ObstacleAvoidance(thymioController, debug, EXPERIMENT_NAME)
+	task = ForagingTask(thymioController, debug, EXPERIMENT_NAME)
 	
 	def epoch_callback(population):
 		current_champ = population.champions[-1]

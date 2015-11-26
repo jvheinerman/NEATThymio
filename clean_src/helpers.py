@@ -1,5 +1,6 @@
 import sys, os, errno
 
+MAX_MOTOR_SPEED = 300
 RAND_MAX = sys.maxint
 LEFT = 0
 RIGHT = 1
@@ -27,3 +28,28 @@ def sqrt_rand_normal():
 
 def gaussrand():
     return sqrt_rand_normal() * math.cos(2 * math.pi * drand())
+
+def getNextIDPath(path):
+    nextID = 0
+    filelist = sorted(os.listdir(path))
+    if filelist and filelist[-1][0].isdigit():
+        nextID = int(filelist[-1][0]) + 1
+    return str(nextID)
+
+def writeMotorSpeed(controller, motorspeed):
+    controller.SetVariable("thymio-II", "motor.left.target", [motorspeed['left'] * MAX_MOTOR_SPEED])
+    controller.SetVariable("thymio-II", "motor.right.target", [motorspeed['right'] * MAX_MOTOR_SPEED])
+
+
+def getProxReadings(controller, ok_callback, nok_callback):
+    controller.GetVariable("thymio-II", "prox.horizontal", reply_handler=ok_callback, error_handler=nok_callback)
+
+def stopThymio(controller):
+    writeMotorSpeed(controller, { 'left': 0, 'right': 0 })
+
+def dbusReply():
+    pass
+
+
+def dbusError(e):
+    print 'error %s' % str(e)
