@@ -121,11 +121,6 @@ class CameraVision(threading.Thread):
 
         return presence
 
-    def retImg2vectors(self, lower_color, upper_color, full_image, selector):
-        binary = cv2.inRange(full_image, lower_color, upper_color)
-        point = binary.clone()
-        
-
     def run(self):
         try:
             with picamera.PiCamera() as camera:
@@ -186,6 +181,108 @@ class CameraVision(threading.Thread):
 
                     # black color changed into blu color (thymio doesn't have blu part. Only goal is blu)
                     self.presenceGoal = self.retContours(lower_blue, upper_blue, image_total, 1)
+
+                    # print("presenceRed {}".format(self.presence))
+                    # print("presenceBlack {}".format(self.presenceGoal))
+                    # print("presenceBlack {}".format(self.presenceGoal))
+
+                    if self.camera:
+                        cv2.imshow("ColourTrackerWindow", image)
+                    # cv2.imshow("sub_image_left", sub_image_left)
+                    # cv2.imshow("sub_image_central", sub_image_central)
+                    # cv2.imshow("sub_image_right", sub_image_right)
+                    # cv2.imshow("sub_image_bottom", sub_image_bottom)
+
+                    stream.truncate()
+                    stream.seek(0)
+
+                    # stop thread
+                    if self.__stopped():
+                        self.__simLogger.debug("Stopping camera thread")
+                        break
+            cv2.destroyAllWindows()
+        except Exception as e:
+            self.__simLogger.critical("Camera exception: " + str(e) + str(
+                sys.exc_info()[0]) + ' - ' + traceback.format_exc())
+
+
+class CameraVisionVectors(CameraVision):
+    def retImg2vectors(self, lower_color, upper_color, full_image):
+        binary = cv2.inRange(full_image, lower_color, upper_color)
+        point = np.zeros(binary.shape)
+        mid_point = point.shape[0] - 1, point.shape[1] / 2 - 1
+        point[mid_point] = 1
+        kernel = np.array([[0, 0, 1, 1, 0, 0],
+                           [0, 1, 1, 1, 1, 0],
+                           [1, 1, 1, 1, 1, 1],
+                           [1, 1, 1, 1, 1, 1],
+                           [0, 1, 1, 1, 1, 0],
+                           [0, 0, 1, 1, 0, 0], dtype=np.uint8)
+        closest = None
+        while True:
+            conv = np.multiply(point, binary)
+            indices = zip(*np.where(conv==1))
+            if indices:
+                closest = indices[0]
+                break
+        dx = (mid_point[0] - closest[0])
+        dy = (mid_point[1] - closest[1])
+        dist = np.sqrt(dx ** 2 + dy ** 2)
+        if dx and dy:
+            angle = np.arctan2(dy, dx) - 90
+        else:
+            angle = 0
+        return dist, angle
+
+    def run(self):
+        try:
+            with picamera.PiCamera() as camera:
+                camera.resolution = (self.CAMERA_WIDTH, self.CAMERA_HEIGHT)
+                camera.framerate = 30
+
+                # capture into stream
+                stream = io.BytesIO()
+                for foo in camera.capture_continuous(stream, 'jpeg'):
+                    data = np.fromstring(stream.getvalue(), dtype=np.uint8)
+                    # "Decode" the image from the array, preserving colour
+                    image = cv2.imdecode(data, 1)
+
+                    # Convert BGR to HSV
+                    image = cv2.GaussianBlur(image, (5, 5), 0)
+                    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+                    # Resize image
+                    hsv = cv2.resize(hsv, (len(image[0]) / self.scale_down, len(image) / self.scale_down))
+
+                    # Calculate value to divide the image into three/four different part
+                    valueDivision = math.floor((self.CAMERA_WIDTH / 3) / self.scale_down)
+                    valueDivisionVertical = math.floor((self.CAMERA_HEIGHT / 4) / self.scale_down)
+
+                    # Divide image in three pieces
+                    # define range of blue color in HSV
+                    lower_blue = np.array([80, 60, 50])
+                    upper_blue = np.array([120, 255, 255])
+
+                    # define range of red color in HSV
+                    # My value
+                    red_lower = np.array([120, 80, 0])
+                    red_upper = np.array([180, 255, 255])
+
+                    # define range of green color in HSV
+                    green_lower = np.array([30, 75, 75])
+                    green_upper = np.array([60, 255, 255])
+
+                    # define range of white color in HSV
+                    test = 110
+                    lower_white = np.array([0, 0, 255 - test])
+                    upper_white = np.array([360, test, 255])
+
+                    # define range of black color in HSV
+                    black_lower = np.array([0, 0, 0])
+                    black_upper = np.array([180, 255, 30])
+
+                    self.presence = self.retImg2vectors(red_lower, red_upper, hsv)
+
+                    self.presenceGoal = self.retImg2vectors(lower_blue, upper_blue, hsv)
 
                     # print("presenceRed {}".format(self.presence))
                     # print("presenceBlack {}".format(self.presenceGoal))
