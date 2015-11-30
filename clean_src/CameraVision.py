@@ -217,7 +217,9 @@ class CameraVisionVectors(CameraVision):
                            [1, 1, 1, 1, 1, 1],
                            [1, 1, 1, 1, 1, 1],
                            [0, 1, 1, 1, 1, 0],
-                           [0, 0, 1, 1, 0, 0], dtype=np.uint8)
+                           [0, 0, 1, 1, 0, 0]], dtype=np.uint8)
+        
+        print(binary.shape)
         closest = None
         while True:
             conv = np.multiply(point, binary)
@@ -225,6 +227,10 @@ class CameraVisionVectors(CameraVision):
             if indices:
                 closest = indices[0]
                 break
+            if point.sum() >= point.shape[0] * point.shape[1]:
+                return -point.shape[0], 0
+
+            point = cv2.dilate(point, kernel)
         dx = (mid_point[0] - closest[0])
         dy = (mid_point[1] - closest[1])
         dist = np.sqrt(dx ** 2 + dy ** 2)
@@ -232,6 +238,8 @@ class CameraVisionVectors(CameraVision):
             angle = np.arctan2(dy, dx) - 90
         else:
             angle = 0
+
+        print('Found distance: ' + str(dist) + ' and angle: ' + str(angle))
         return dist, angle
 
     def run(self):
@@ -264,8 +272,10 @@ class CameraVisionVectors(CameraVision):
 
                     # define range of red color in HSV
                     # My value
-                    red_lower = np.array([120, 80, 0])
-                    red_upper = np.array([180, 255, 255])
+                    # red_lower = np.array([120, 80, 0])
+                    # red_upper = np.array([180, 255, 255])
+                    red_lower = np.array([100, 50, 0])
+                    red_upper = np.array([200, 255, 255])
 
                     # define range of green color in HSV
                     green_lower = np.array([30, 75, 75])
@@ -280,6 +290,7 @@ class CameraVisionVectors(CameraVision):
                     black_lower = np.array([0, 0, 0])
                     black_upper = np.array([180, 255, 30])
 
+                    print('Getting presence of puck')
                     self.presence = self.retImg2vectors(red_lower, red_upper, hsv)
 
                     self.presenceGoal = self.retImg2vectors(lower_blue, upper_blue, hsv)

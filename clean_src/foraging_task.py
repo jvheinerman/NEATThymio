@@ -28,7 +28,8 @@ class ForagingTask(NEATTask):
 
 	def __init__(self, thymioController, debug=False, experimentName='NEAT_task', evaluations=1000, timeStep=0.005, activationFunction='tanh', popSize=1, generations=100, solvedAt=1000):
 		NEATTask.__init__(self, thymioController, debug, experimentName, evaluations, timeStep, activationFunction, popSize, generations, solvedAt)
-		self.camera = CameraVision(False, self.logger)
+		self.camera = CameraVisionVectors(False, self.logger)
+		self.camera.run()
 		print('Camera initialized')
 		
 	def _step(self, evaluee, callback):
@@ -36,7 +37,7 @@ class ForagingTask(NEATTask):
 		presence_goal = self.camera.readGoalPresence()
 		self.presence = presence_box + presence_goal
 
-		inputs = np.hstack((presence, 1))
+		inputs = np.hstack((self.presence, 1))
 
 		out = NeuralNetwork(evaluee).feed(inputs)
 		left, right = list(out[-2:])
@@ -51,7 +52,7 @@ class ForagingTask(NEATTask):
 
 	def getEnergyDelta(self):
 		print(self.presence)
-		return fitness
+		return self.fitness
 
 	def evaluate(self, evaluee):
 		self.evaluations_taken = 0
@@ -74,7 +75,7 @@ class ForagingTask(NEATTask):
 		# glib.idle_add(lambda: main_lambda(self))
 		self.loop.run()
 
-		fitness = getFitness()
+		fitness = self.getFitness()
 		print 'Fitness at end: %d' % fitness
 
 		time.sleep(1)
