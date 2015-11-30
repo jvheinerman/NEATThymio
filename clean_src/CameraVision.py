@@ -121,6 +121,11 @@ class CameraVision(threading.Thread):
 
         return presence
 
+    def retImg2vectors(self, lower_color, upper_color, full_image, selector):
+        binary = cv2.inRange(full_image, lower_color, upper_color)
+        point = binary.clone()
+        
+
     def run(self):
         try:
             with picamera.PiCamera() as camera:

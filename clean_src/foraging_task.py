@@ -17,6 +17,10 @@ GENERATIONS = 100
 SOLVED_AT = EVALUATIONS * 2
 EXPERIMENT_NAME = 'NEAT_foraging_task'
 
+INITIAL_ENERGY = 500
+MAX_ENERGY = 1000
+ENERGY_DECAY = 1
+
 CURRENT_FILE_PATH = os.path.abspath(os.path.dirname(__file__))
 AESL_PATH = os.path.join(CURRENT_FILE_PATH, 'asebaCommands.aesl')
 
@@ -30,41 +34,52 @@ class ForagingTask(NEATTask):
 	def _step(self, evaluee, callback):
 		presence_box = self.camera.readPuckPresence()
 		presence_goal = self.camera.readGoalPresence()
-		presence = presence_box + presence_goal
-		print('presence: ' + str(presence))
+		self.presence = presence_box + presence_goal
 
 		inputs = np.hstack((presence, 1))
 
 		out = NeuralNetwork(evaluee).feed(inputs)
-		print(out)
 		left, right = list(out[-2:])
 		motorspeed = { 'left': left, 'right': right }
 		writeMotorSpeed(self.thymioController, motorspeed)
 
-		callback(self.getFitness(motorspeed, inputs))
+		callback(self.getEnergyDelta())
 		return True
 
 	def getFitness(self, motorspeed, observation):
-		# Calculate penalty for rotating
-		speedpenalty = 0
-		if motorspeed['left'] > motorspeed['right']:
-			speedpenalty = float((motorspeed['left'] - motorspeed['right'])) / float(pr.real_max_speed)
-		else:
-			speedpenalty = float((motorspeed['right'] - motorspeed['left'])) / float(pr.real_max_speed)
-		if speedpenalty > 1:
-			speedpenalty = 1
+		return max(self.evaluations_taken + self.energy, 1)
 
-		# Calculate normalized distance to the nearest object
-		sensorpenalty = 0
-		for i, sensor in enumerate(observation[:-1]):
-			distance = sensor / float(classes.SENSOR_MAX[i])
-			if sensorpenalty < distance:
-				sensorpenalty = distance
-		if sensorpenalty > 1:
-			sensorpenalty = 1
+	def getEnergyDelta(self):
+		print(self.presence)
+		return fitness
 
-		# fitness for 1 timestep in [-2, 2]
-		return float(motorspeed['left'] + motorspeed['right']) * (1 - speedpenalty) * (1 - sensorpenalty)
+	def evaluate(self, evaluee):
+		self.evaluations_taken = 0
+		self.energy = INITIAL_ENERGY
+		self.fitness = 0
+		self.loop = gobject.MainLoop()
+		def update_energy(task, energy):
+			task.energy += energy
+		def main_lambda(task):
+			if task.energy <= 0:
+				stopThymio(thymioController)
+				task.loop.quit()
+				return False 
+			ret_value =  self._step(evaluee, lambda (energy): update_energy(self, energy))
+			task.evaluations_taken += 1
+			task.energy -= ENERGY_DECAY
+			# time.sleep(TIME_STEP)
+			return ret_value
+		gobject.timeout_add(int(self.timeStep * 1000), lambda: main_lambda(self))
+		# glib.idle_add(lambda: main_lambda(self))
+		self.loop.run()
+
+		fitness = getFitness()
+		print 'Fitness at end: %d' % fitness
+
+		time.sleep(1)
+
+		return { 'fitness': fitness }
 
 
 if __name__ == '__main__':
