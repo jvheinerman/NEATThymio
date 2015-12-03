@@ -207,6 +207,17 @@ class CameraVision(threading.Thread):
 
 
 class CameraVisionVectors(CameraVision):
+    def find_shortest(distances, binary):
+        shortest_dist = 999999999
+        angles = None
+        for x in range(self.CAMERA_WIDTH):
+            for y in range(self.CAMERA_HEIGHT):
+                if binary[x, y]:
+                    if distances[x, y] < shortest_dist:
+                        shortest_dist = distances[x, y]
+                        angle = angles[x, y]
+        return shortest_dist, angle
+
     def retImg2vectors(self, lower_color, upper_color, full_image):
         binary = cv2.inRange(full_image, lower_color, upper_color)
         point = np.zeros(binary.shape)
