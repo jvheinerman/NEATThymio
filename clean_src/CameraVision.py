@@ -4,6 +4,7 @@ import traceback
 import threading
 import numpy as np
 import io
+import pickle
 
 import cv2
 
@@ -207,54 +208,35 @@ class CameraVision(threading.Thread):
 
 
 class CameraVisionVectors(CameraVision):
-    def find_shortest(distances, binary):
-        shortest_dist = 999999999
-        angles = None
-        for x in range(self.CAMERA_WIDTH):
-            for y in range(self.CAMERA_HEIGHT):
-                if binary[x, y]:
-                    if distances[x, y] < shortest_dist:
-                        shortest_dist = distances[x, y]
-                        angle = angles[x, y]
+    def __init__(self, camera, logger):
+        CameraVision.__init__(self, camera, logger)
+
+    def find_shortest(self, distances, angles, binary):
+        shortest_dist = np.inf
+        angle = None
+        print(binary.shape)
+        
+        for y in range(self.CAMERA_HEIGHT):
+            for x in range(self.CAMERA_WIDTH):
+                if binary[y, x]:
+                    if distances[y, x] < shortest_dist:
+                        shortest_dist = distances[y, x]
+                        angle = angles[y, x]
         return shortest_dist, angle
 
-    def retImg2vectors(self, lower_color, upper_color, full_image):
+    def retImg2vectors(self, lower_color, upper_color, full_image, distances, angles):
         binary = cv2.inRange(full_image, lower_color, upper_color)
-        point = np.zeros(binary.shape)
-        mid_point = point.shape[0] - 1, point.shape[1] / 2 - 1
-        point[mid_point] = 1
-        kernel = np.array([[0, 0, 1, 1, 0, 0],
-                           [0, 1, 1, 1, 1, 0],
-                           [1, 1, 1, 1, 1, 1],
-                           [1, 1, 1, 1, 1, 1],
-                           [0, 1, 1, 1, 1, 0],
-                           [0, 0, 1, 1, 0, 0]], dtype=np.uint8)
-        
-        print(binary.shape)
-        closest = None
-        while True:
-            conv = np.multiply(point, binary)
-            indices = zip(*np.where(conv==1))
-            if indices:
-                closest = indices[0]
-                break
-            if point.sum() >= point.shape[0] * point.shape[1]:
-                return -point.shape[0], 0
-
-            point = cv2.dilate(point, kernel)
-        dx = (mid_point[0] - closest[0])
-        dy = (mid_point[1] - closest[1])
-        dist = np.sqrt(dx ** 2 + dy ** 2)
-        if dx and dy:
-            angle = np.arctan2(dy, dx) - 90
-        else:
-            angle = 0
+        dist, angle = self.find_shortest(distances, angles, binary)
 
         print('Found distance: ' + str(dist) + ' and angle: ' + str(angle))
         return dist, angle
 
     def run(self):
         try:
+            loaded_dist_angles = pickle.load(open("distances.p"))
+            distances = loaded_dist_angles['distances']
+            angles = loaded_dist_angles['angles']
+
             with picamera.PiCamera() as camera:
                 camera.resolution = (self.CAMERA_WIDTH, self.CAMERA_HEIGHT)
                 camera.framerate = 30
@@ -302,9 +284,8 @@ class CameraVisionVectors(CameraVision):
                     black_upper = np.array([180, 255, 30])
 
                     print('Getting presence of puck')
-                    self.presence = self.retImg2vectors(red_lower, red_upper, hsv)
-
-                    self.presenceGoal = self.retImg2vectors(lower_blue, upper_blue, hsv)
+                    self.presence = self.retImg2vectors(red_lower, red_upper, hsv, distances, angles)
+                    self.presenceGoal = self.retImg2vectors(lower_blue, upper_blue, hsv, distances, angles)
 
                     # print("presenceRed {}".format(self.presence))
                     # print("presenceBlack {}".format(self.presenceGoal))
@@ -322,9 +303,9 @@ class CameraVisionVectors(CameraVision):
 
                     # stop thread
                     if self.__stopped():
-                        self.__simLogger.debug("Stopping camera thread")
+                        print("Stopping camera thread")
                         break
             cv2.destroyAllWindows()
         except Exception as e:
-            self.__simLogger.critical("Camera exception: " + str(e) + str(
+            print("Camera exception: " + str(e) + str(
                 sys.exc_info()[0]) + ' - ' + traceback.format_exc())
