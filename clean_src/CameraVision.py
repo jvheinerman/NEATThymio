@@ -5,6 +5,7 @@ import threading
 import numpy as np
 import io
 import pickle
+import time
 
 import cv2
 
@@ -31,7 +32,7 @@ class CameraVision(threading.Thread):
         with self.__isCameraAlive:
             self.__isCameraAlive.notify()
 
-    def __stopped(self):
+    def _stopped(self):
         return self.__isStopped.isSet()
 
     def readPuckPresence(self):
@@ -198,7 +199,7 @@ class CameraVision(threading.Thread):
                     stream.seek(0)
 
                     # stop thread
-                    if self.__stopped():
+                    if self._stopped():
                         self.__simLogger.debug("Stopping camera thread")
                         break
             cv2.destroyAllWindows()
@@ -211,22 +212,29 @@ class CameraVisionVectors(CameraVision):
     def __init__(self, camera, logger):
         CameraVision.__init__(self, camera, logger)
 
-    def find_shortest(self, distances, angles, binary):
+    def find_shortest(self, distances, angles, binary, check_puck=False):
         shortest_dist = np.inf
-        angle = None
-        print(binary.shape)
+        angle = 0
+
+        central_index = binary.shape[1] / 2
+        if check_puck and np.all(binary[-1, (central_index - 1):(central_index + 1)]):
+            return 0, 0
         
         for y in range(self.CAMERA_HEIGHT):
             for x in range(self.CAMERA_WIDTH):
                 if binary[y, x]:
                     if distances[y, x] < shortest_dist:
                         shortest_dist = distances[y, x]
-                        angle = angles[y, x]
-        return shortest_dist, angle
+                        angle = angles[y, x]        
+        
+        if shortest_dist == np.inf:
+            return -np.inf, 0
+        else:
+            return shortest_dist, angle
 
-    def retImg2vectors(self, lower_color, upper_color, full_image, distances, angles):
+    def retImg2vectors(self, lower_color, upper_color, full_image, distances, angles, check_puck=False):
         binary = cv2.inRange(full_image, lower_color, upper_color)
-        dist, angle = self.find_shortest(distances, angles, binary)
+        dist, angle = self.find_shortest(distances, angles, binary, check_puck=check_puck)
 
         print('Found distance: ' + str(dist) + ' and angle: ' + str(angle))
         return dist, angle
@@ -265,10 +273,8 @@ class CameraVisionVectors(CameraVision):
 
                     # define range of red color in HSV
                     # My value
-                    # red_lower = np.array([120, 80, 0])
-                    # red_upper = np.array([180, 255, 255])
-                    red_lower = np.array([100, 50, 0])
-                    red_upper = np.array([200, 255, 255])
+                    red_lower = np.array([120, 80, 0])
+                    red_upper = np.array([180, 255, 255])
 
                     # define range of green color in HSV
                     green_lower = np.array([30, 75, 75])
@@ -284,7 +290,8 @@ class CameraVisionVectors(CameraVision):
                     black_upper = np.array([180, 255, 30])
 
                     print('Getting presence of puck')
-                    self.presence = self.retImg2vectors(red_lower, red_upper, hsv, distances, angles)
+                    self.presence = self.retImg2vectors(green_lower, green_upper, hsv, distances, angles, check_puck=True)
+                    print('Getting presence of goal')
                     self.presenceGoal = self.retImg2vectors(lower_blue, upper_blue, hsv, distances, angles)
 
                     # print("presenceRed {}".format(self.presence))
@@ -302,7 +309,7 @@ class CameraVisionVectors(CameraVision):
                     stream.seek(0)
 
                     # stop thread
-                    if self.__stopped():
+                    if self._stopped():
                         print("Stopping camera thread")
                         break
             cv2.destroyAllWindows()

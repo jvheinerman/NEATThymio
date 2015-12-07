@@ -7,6 +7,7 @@ import gobject
 import glib
 import dbus
 import dbus.mainloop.glib
+import time
 
 EVALUATIONS = 1000
 MAX_MOTOR_SPEED = 300
@@ -51,7 +52,6 @@ class ForagingTask(NEATTask):
 		return max(self.evaluations_taken + self.energy, 1)
 
 	def getEnergyDelta(self):
-		print(self.presence)
 		return self.fitness
 
 	def evaluate(self, evaluee):
