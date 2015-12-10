@@ -6,11 +6,7 @@ import dbus
 import dbus.mainloop.glib
 import logging
 from helpers import *
-
-CURRENT_FILE_PATH = os.path.abspath(os.path.dirname(__file__))
-OUTPUT_PATH = os.path.join(CURRENT_FILE_PATH, 'output')
-PICKLED_DIR = os.path.join(CURRENT_FILE_PATH, 'pickled')
-FORMATTER = logging.Formatter('%(asctime)s - %(levelname)s: %(message)s')
+from parameters import *
 
 class NEATTask:
 	def __init__(self, thymioController, debug=False, experimentName='NEAT_task', evaluations=1000, timeStep=0.005, activationFunction='tanh', popSize=1, generations=100, solvedAt=1000):

@@ -1,6 +1,8 @@
 # parameters.py created on March 12, 2015. Jacqueline Heinerman & Massimiliano Rango
 # modified by Alessandro Zonta on June 25, 2015
 import classes
+import os
+import logging
 
 EXPERIMENT_NAME = "WRITE_EXPERIMENT_NAME_HERE"
 starter_number = 0
@@ -38,5 +40,10 @@ max_fitness = eval_time * 6
 
 # Am I using hidden layer?
 hidden_layer = 1
+
+CURRENT_FILE_PATH = os.path.abspath(os.path.dirname(__file__))
+OUTPUT_PATH = os.path.join(CURRENT_FILE_PATH, 'output')
+PICKLED_DIR = os.path.join(CURRENT_FILE_PATH, 'pickled')
+FORMATTER = logging.Formatter('%(asctime)s - %(levelname)s: %(message)s')
 
 

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import sys
 import math
 import traceback
@@ -213,24 +214,25 @@ class CameraVisionVectors(CameraVision):
         CameraVision.__init__(self, camera, logger)
 
     def find_shortest(self, distances, angles, binary, check_puck=False):
-        shortest_dist = np.inf
-        angle = 0
+        # if object is not found
+        if not binary.any():
+            print 'Object not found'
+            return -np.inf, 0
 
         central_index = binary.shape[1] / 2
         if check_puck and np.all(binary[-1, (central_index - 1):(central_index + 1)]):
             return 0, 0
-        
-        for y in range(self.CAMERA_HEIGHT):
-            for x in range(self.CAMERA_WIDTH):
-                if binary[y, x]:
-                    if distances[y, x] < shortest_dist:
-                        shortest_dist = distances[y, x]
-                        angle = angles[y, x]        
-        
-        if shortest_dist == np.inf:
-            return -np.inf, 0
-        else:
-            return shortest_dist, angle
+
+        distances = np.array(distances)
+
+        distances_copy = distances.copy()
+        distances_copy[binary == 0] = np.finfo(distances_copy.dtype).max
+
+        shortest_dist_index = np.argmin(distances_copy)
+        shortest_dist = distances.reshape(-1)[shortest_dist_index]
+        angle = angles.reshape(-1)[shortest_dist_index]
+
+        return shortest_dist, angle
 
     def retImg2vectors(self, lower_color, upper_color, full_image, distances, angles, check_puck=False):
         binary = cv2.inRange(full_image, lower_color, upper_color)
@@ -289,9 +291,7 @@ class CameraVisionVectors(CameraVision):
                     black_lower = np.array([0, 0, 0])
                     black_upper = np.array([180, 255, 30])
 
-                    print('Getting presence of puck')
                     self.presence = self.retImg2vectors(green_lower, green_upper, hsv, distances, angles, check_puck=True)
-                    print('Getting presence of goal')
                     self.presenceGoal = self.retImg2vectors(lower_blue, upper_blue, hsv, distances, angles)
 
                     # print("presenceRed {}".format(self.presence))
