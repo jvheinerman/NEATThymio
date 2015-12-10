@@ -20,13 +20,21 @@ class CameraVision(threading.Thread):
         self.CAMERA_WIDTH = 320
         self.CAMERA_HEIGHT = 240
         self.scale_down = 1
-        self.presence = [0, 0, 0, 0]
-        self.presenceGoal = [0, 0, 0, 0]
         self.camera = camera
         self.__isCameraAlive = threading.Condition()
         self.__isStopped = threading.Event()
         self.__simLogger = simulationLogger
         self.__imageAreaThreshold = 1000
+
+        loaded_dist_angles = pickle.load(open("distances.p"))
+        self.distances = loaded_dist_angles['distances']
+        self.angles = loaded_dist_angles['angles']
+        self.MAX_DISTANCE = np.max(self.distances) + 1
+
+        # self.presence = [self.MAX_DISTANCE, 0]
+        # self.presenceGoal = [self.MAX_DISTANCE, 0]
+        self.presence = None
+        self.presenceGoal = None
 
     def stop(self):
         self.__isStopped.set()
@@ -213,47 +221,42 @@ class CameraVisionVectors(CameraVision):
     def __init__(self, camera, logger):
         CameraVision.__init__(self, camera, logger)
 
-    def find_shortest(self, distances, angles, binary, check_puck=False):
+    def find_shortest(self, binary, check_puck=False):
         # if object is not found
         if not binary.any():
-            print 'Object not found'
             return -np.inf, 0
 
         central_index = binary.shape[1] / 2
         if check_puck and np.all(binary[-1, (central_index - 1):(central_index + 1)]):
             return 0, 0
 
-        distances = np.array(distances)
-
-        distances_copy = distances.copy()
+        distances_copy = self.distances.copy()
         distances_copy[binary == 0] = np.finfo(distances_copy.dtype).max
 
         shortest_dist_index = np.argmin(distances_copy)
-        shortest_dist = distances.reshape(-1)[shortest_dist_index]
-        angle = angles.reshape(-1)[shortest_dist_index]
+        shortest_dist = self.distances.reshape(-1)[shortest_dist_index]
+        angle = self.angles.reshape(-1)[shortest_dist_index]
 
         return shortest_dist, angle
 
-    def retImg2vectors(self, lower_color, upper_color, full_image, distances, angles, check_puck=False):
+    def retImg2vectors(self, lower_color, upper_color, full_image, check_puck=False):
         binary = cv2.inRange(full_image, lower_color, upper_color)
-        dist, angle = self.find_shortest(distances, angles, binary, check_puck=check_puck)
+        dist, angle = self.find_shortest(binary, check_puck=check_puck)
 
-        print('Found distance: ' + str(dist) + ' and angle: ' + str(angle))
+        # print('Found distance: ' + str(dist) + ' and angle: ' + str(angle))
         return dist, angle
 
     def run(self):
         try:
-            loaded_dist_angles = pickle.load(open("distances.p"))
-            distances = loaded_dist_angles['distances']
-            angles = loaded_dist_angles['angles']
-
             with picamera.PiCamera() as camera:
                 camera.resolution = (self.CAMERA_WIDTH, self.CAMERA_HEIGHT)
                 camera.framerate = 30
 
+                time.sleep(2)
+
                 # capture into stream
                 stream = io.BytesIO()
-                for foo in camera.capture_continuous(stream, 'jpeg'):
+                for foo in camera.capture_continuous(stream, format='jpeg', use_video_port=True):
                     data = np.fromstring(stream.getvalue(), dtype=np.uint8)
                     # "Decode" the image from the array, preserving colour
                     image = cv2.imdecode(data, 1)
@@ -291,8 +294,8 @@ class CameraVisionVectors(CameraVision):
                     black_lower = np.array([0, 0, 0])
                     black_upper = np.array([180, 255, 30])
 
-                    self.presence = self.retImg2vectors(green_lower, green_upper, hsv, distances, angles, check_puck=True)
-                    self.presenceGoal = self.retImg2vectors(lower_blue, upper_blue, hsv, distances, angles)
+                    self.presence = self.retImg2vectors(green_lower, green_upper, hsv, check_puck=True)
+                    self.presenceGoal = self.retImg2vectors(lower_blue, upper_blue, hsv)
 
                     # print("presenceRed {}".format(self.presence))
                     # print("presenceBlack {}".format(self.presenceGoal))

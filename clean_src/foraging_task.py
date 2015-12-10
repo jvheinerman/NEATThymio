@@ -25,6 +25,9 @@ INITIAL_ENERGY = 500
 MAX_ENERGY = 1000
 ENERGY_DECAY = 1
 
+PUCK_BONUS_SCALE = 5
+GOAL_BONUS_SCALE = 5
+
 CURRENT_FILE_PATH = os.path.abspath(os.path.dirname(__file__))
 AESL_PATH = os.path.join(CURRENT_FILE_PATH, 'asebaCommands.aesl')
 
@@ -37,15 +40,20 @@ class ForagingTask(NEATTask):
     def _step(self, evaluee, callback):
         presence_box = self.camera.readPuckPresence()
         presence_goal = self.camera.readGoalPresence()
-        self.presence = tuple(presence_box) + tuple(presence_goal)
-        # print self.presence
 
-        inputs = np.hstack((self.presence, 1))
+        # print presence_box, presence_goal
+        if presence_goal and presence_box:
+            self.prev_presence = self.presence
+            self.presence = tuple(presence_box) + tuple(presence_goal)
 
-        out = NeuralNetwork(evaluee).feed(inputs)
-        left, right = list(out[-2:])
-        motorspeed = { 'left': left, 'right': right }
-        # writeMotorSpeed(self.thymioController, motorspeed)
+            inputs = np.hstack((self.presence, 1))
+
+            out = NeuralNetwork(evaluee).feed(inputs)
+            left, right = list(out[-2:])
+            motorspeed = { 'left': left, 'right': right }
+            # writeMotorSpeed(self.thymioController, motorspeed)
+        else:
+            time.sleep(.1)
 
         callback(self.getEnergyDelta())
         return True
@@ -54,12 +62,26 @@ class ForagingTask(NEATTask):
         return max(self.evaluations_taken + self.energy, 1)
 
     def getEnergyDelta(self):
-        return self.fitness
+        self.presence = [x if not x == -np.inf else self.camera.MAX_DISTANCE for x in self.presence]
+        self.prev_presence = [x if not x == -np.inf else self.camera.MAX_DISTANCE for x in self.prev_presence]
+
+        if None in self.presence or None in self.prev_presence:
+            return ENERGY_DECAY
+
+        energy_delta = PUCK_BONUS_SCALE * (self.prev_presence[0] - self.presence[0])
+        
+        print self.presence
+        if self.presence[0] == 0:
+            energy_delta = GOAL_BONUS_SCALE * (self.prev_presence[2] - self.presence[2])
+
+        if energy_delta: print('Energy delta %d' % energy_delta)
+        return energy_delta
 
     def evaluate(self, evaluee):
         self.evaluations_taken = 0
         self.energy = INITIAL_ENERGY
         self.fitness = 0
+        self.presence = self.prev_presence = (None, None)
         self.loop = gobject.MainLoop()
         def update_energy(task, energy):
             task.energy += energy
@@ -67,6 +89,7 @@ class ForagingTask(NEATTask):
             if task.energy <= 0:
                 stopThymio(thymioController)
                 task.loop.quit()
+                print 'Energy exhausted'
                 return False 
             ret_value =  task._step(evaluee, lambda (energy): update_energy(task, energy))
             task.evaluations_taken += 1
@@ -80,6 +103,7 @@ class ForagingTask(NEATTask):
         try:
             self.camera = CameraVisionVectors(False, self.logger)
             self.camera.start()
+            # time.sleep(2)
         except RuntimeError, e:
             print 'Camera already started!'
         
