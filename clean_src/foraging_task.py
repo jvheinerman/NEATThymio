@@ -4,6 +4,7 @@ from helpers import *
 from parameters import *
 from neat_task import NEATTask
 from CameraVision import *
+import classes as cl
 from peas.networks.rnn import NeuralNetwork
 
 import gobject
@@ -16,7 +17,7 @@ EVALUATIONS = 1000
 MAX_MOTOR_SPEED = 300
 TIME_STEP = 0.005
 ACTIVATION_FUNC = 'tanh'
-POPSIZE = 1
+POPSIZE = 20
 GENERATIONS = 100
 SOLVED_AT = EVALUATIONS * 2
 EXPERIMENT_NAME = 'NEAT_foraging_task'
@@ -27,6 +28,7 @@ ENERGY_DECAY = 1
 
 PUCK_BONUS_SCALE = 5
 GOAL_BONUS_SCALE = 5
+GOAL_REACHED_BONUS = INITIAL_ENERGY
 
 CURRENT_FILE_PATH = os.path.abspath(os.path.dirname(__file__))
 AESL_PATH = os.path.join(CURRENT_FILE_PATH, 'asebaCommands.aesl')
@@ -46,12 +48,13 @@ class ForagingTask(NEATTask):
             self.prev_presence = self.presence
             self.presence = tuple(presence_box) + tuple(presence_goal)
 
-            inputs = np.hstack((self.presence, 1))
+            inputs = np.hstack(([x if not x == -np.inf else -10000 for x in self.presence], 1))
+            inputs[::2] = inputs[::2] / self.camera.MAX_DISTANCE
 
             out = NeuralNetwork(evaluee).feed(inputs)
             left, right = list(out[-2:])
             motorspeed = { 'left': left, 'right': right }
-            # writeMotorSpeed(self.thymioController, motorspeed)
+            writeMotorSpeed(self.thymioController, motorspeed)
         else:
             time.sleep(.1)
 
@@ -70,11 +73,25 @@ class ForagingTask(NEATTask):
 
         energy_delta = PUCK_BONUS_SCALE * (self.prev_presence[0] - self.presence[0])
         
-        print self.presence
+        # print self.presence
         if self.presence[0] == 0:
             energy_delta = GOAL_BONUS_SCALE * (self.prev_presence[2] - self.presence[2])
 
+        if self.camera.goal_reached():
+            stopThymio(self.thymioController)
+
+            self.thymioController.SendEventName('PlayFreq', [700, 0], reply_handler=dbusReply, error_handler=dbusError)
+            time.sleep(.3)
+            self.thymioController.SendEventName('PlayFreq', [700, -1], reply_handler=dbusReply, error_handler=dbusError)
+            time.sleep(0.1)
+
+            while not self.camera.readPuckPresence()[0] == 0:
+                time.sleep(.1)
+            time.sleep(1)
+            energy_delta = GOAL_REACHED_BONUS
+
         if energy_delta: print('Energy delta %d' % energy_delta)
+        
         return energy_delta
 
     def evaluate(self, evaluee):
@@ -113,6 +130,8 @@ class ForagingTask(NEATTask):
         fitness = self.getFitness()
         print 'Fitness at end: %d' % fitness
 
+        stopThymio(self.thymioController)
+
         self.camera.stop()
         self.camera.join()
         time.sleep(1)
@@ -122,7 +141,7 @@ class ForagingTask(NEATTask):
 
 if __name__ == '__main__':
     from peas.methods.neat import NEATPopulation, NEATGenotype
-    genotype = lambda: NEATGenotype(inputs=9, outputs=2, types=[ACTIVATION_FUNC])
+    genotype = lambda: NEATGenotype(inputs=5, outputs=2, types=[ACTIVATION_FUNC])
     pop = NEATPopulation(genotype, popsize=POPSIZE)
 
     dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)

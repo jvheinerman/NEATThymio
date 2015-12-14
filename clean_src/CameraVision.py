@@ -220,6 +220,28 @@ class CameraVision(threading.Thread):
 class CameraVisionVectors(CameraVision):
     def __init__(self, camera, logger):
         CameraVision.__init__(self, camera, logger)
+        # Divide image in three pieces
+        # define range of blue color in HSV
+        self.blue_lower = np.array([80, 60, 50])
+        self.blue_upper = np.array([120, 255, 255])
+
+        # define range of red color in HSV
+        # My value
+        self.red_lower = np.array([120, 80, 0])
+        self.red_upper = np.array([180, 255, 255])
+
+        # define range of green color in HSV
+        self.green_lower = np.array([30, 75, 75])
+        self.green_upper = np.array([60, 255, 255])
+
+        # define range of white color in HSV
+        test = 110
+        self.white_lower = np.array([0, 0, 255 - test])
+        self.white_upper = np.array([360, test, 255])
+
+        # define range of black color in HSV
+        self.black_lower = np.array([0, 0, 0])
+        self.black_upper = np.array([180, 255, 30])
 
     def find_shortest(self, binary, check_puck=False):
         # if object is not found
@@ -239,12 +261,26 @@ class CameraVisionVectors(CameraVision):
 
         return shortest_dist, angle
 
-    def retImg2vectors(self, lower_color, upper_color, full_image, check_puck=False):
-        binary = cv2.inRange(full_image, lower_color, upper_color)
+    def img_to_vector(self, check_puck=False):
+        if check_puck:
+            lower_color = self.green_lower
+            upper_color = self.green_upper
+        else:
+            lower_color = self.blue_lower
+            upper_color = self.blue_upper
+
+        binary = cv2.inRange(self.hsv, lower_color, upper_color)
+        if check_puck == False:
+            self.goal_binary = binary
+        
         dist, angle = self.find_shortest(binary, check_puck=check_puck)
 
         # print('Found distance: ' + str(dist) + ' and angle: ' + str(angle))
         return dist, angle
+
+    def goal_reached(self):
+        top_img = self.goal_binary[:self.goal_binary.shape[0] / 2, :]
+        return np.sum(top_img) > 15000 and self.presence[0] == 0
 
     def run(self):
         try:
@@ -263,39 +299,16 @@ class CameraVisionVectors(CameraVision):
 
                     # Convert BGR to HSV
                     image = cv2.GaussianBlur(image, (5, 5), 0)
-                    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+                    self.hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
                     # Resize image
-                    hsv = cv2.resize(hsv, (len(image[0]) / self.scale_down, len(image) / self.scale_down))
+                    self.hsv = cv2.resize(self.hsv, (len(image[0]) / self.scale_down, len(image) / self.scale_down))
 
                     # Calculate value to divide the image into three/four different part
                     valueDivision = math.floor((self.CAMERA_WIDTH / 3) / self.scale_down)
                     valueDivisionVertical = math.floor((self.CAMERA_HEIGHT / 4) / self.scale_down)
 
-                    # Divide image in three pieces
-                    # define range of blue color in HSV
-                    lower_blue = np.array([80, 60, 50])
-                    upper_blue = np.array([120, 255, 255])
-
-                    # define range of red color in HSV
-                    # My value
-                    red_lower = np.array([120, 80, 0])
-                    red_upper = np.array([180, 255, 255])
-
-                    # define range of green color in HSV
-                    green_lower = np.array([30, 75, 75])
-                    green_upper = np.array([60, 255, 255])
-
-                    # define range of white color in HSV
-                    test = 110
-                    lower_white = np.array([0, 0, 255 - test])
-                    upper_white = np.array([360, test, 255])
-
-                    # define range of black color in HSV
-                    black_lower = np.array([0, 0, 0])
-                    black_upper = np.array([180, 255, 30])
-
-                    self.presence = self.retImg2vectors(green_lower, green_upper, hsv, check_puck=True)
-                    self.presenceGoal = self.retImg2vectors(lower_blue, upper_blue, hsv)
+                    self.presence = self.img_to_vector(check_puck=True)
+                    self.presenceGoal = self.img_to_vector()
 
                     # print("presenceRed {}".format(self.presence))
                     # print("presenceBlack {}".format(self.presenceGoal))
