@@ -25,9 +25,10 @@ EXPERIMENT_NAME = 'NEAT_foraging_task'
 INITIAL_ENERGY = 500
 MAX_ENERGY = 1000
 ENERGY_DECAY = 1
+MAX_STEPS = 10000
 
-PUCK_BONUS_SCALE = 5
-GOAL_BONUS_SCALE = 5
+PUCK_BONUS_SCALE = 3
+GOAL_BONUS_SCALE = 3
 GOAL_REACHED_BONUS = INITIAL_ENERGY
 
 CURRENT_FILE_PATH = os.path.abspath(os.path.dirname(__file__))
@@ -69,26 +70,26 @@ class ForagingTask(NEATTask):
         self.prev_presence = [x if not x == -np.inf else self.camera.MAX_DISTANCE for x in self.prev_presence]
 
         if None in self.presence or None in self.prev_presence:
-            return ENERGY_DECAY
+            return 0
 
         energy_delta = PUCK_BONUS_SCALE * (self.prev_presence[0] - self.presence[0])
         
         # print self.presence
         if self.presence[0] == 0:
             energy_delta = GOAL_BONUS_SCALE * (self.prev_presence[2] - self.presence[2])
+        else:
+            print 'Puck lost!'
 
-        if self.camera.goal_reached():
+        if self.camera.goal_reached() and self.presence[2] < 40:
             print '===== Goal reached!'
             stopThymio(self.thymioController)
 
             while self.camera.readPuckPresence()[0] == 0:
-                print '===== Make sound'
                 self.thymioController.SendEventName('PlayFreq', [700, 0], reply_handler=dbusReply, error_handler=dbusError)
                 time.sleep(.3)
                 self.thymioController.SendEventName('PlayFreq', [0, -1], reply_handler=dbusReply, error_handler=dbusError)
                 time.sleep(.7)
             
-            print '===== Exiting goal reached block'
             time.sleep(1)
             energy_delta = GOAL_REACHED_BONUS
 
@@ -105,10 +106,15 @@ class ForagingTask(NEATTask):
         def update_energy(task, energy):
             task.energy += energy
         def main_lambda(task):
-            if task.energy <= 0:
+            if task.energy <= 0 or task.evaluations_taken >= MAX_STEPS:
                 stopThymio(thymioController)
                 task.loop.quit()
-                print 'Energy exhausted'
+                
+                if task.energy <= 0:
+                    print 'Energy exhausted'
+                else:
+                    print 'Time exhausted'
+                
                 return False 
             ret_value =  task._step(evaluee, lambda (energy): update_energy(task, energy))
             task.evaluations_taken += 1

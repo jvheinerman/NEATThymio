@@ -222,7 +222,7 @@ class CameraVisionVectors(CameraVision):
         CameraVision.__init__(self, camera, logger)
         # Divide image in three pieces
         # define range of blue color in HSV
-        self.blue_lower = np.array([80, 60, 20])
+        self.blue_lower = np.array([80, 60, 5])
         self.blue_upper = np.array([120, 255, 255])
 
         # define range of red color in HSV
@@ -271,11 +271,11 @@ class CameraVisionVectors(CameraVision):
 
         binary = cv2.inRange(self.hsv, lower_color, upper_color)
         
-        # if not check_puck:
-            # pickle.dump(binary, open('binary.p', 'wb'))
-            # import sys
-            # print 'Exiting...'
-            # sys.exit(0)
+        # if not check_puck:
+        #    pickle.dump(binary, open('binary.p', 'wb'))
+        #    import sys
+        #    print 'Exiting...'
+        #    sys.exit(0)
         
         if check_puck == False:
             self.goal_binary = binary
@@ -286,8 +286,8 @@ class CameraVisionVectors(CameraVision):
         return dist, angle
 
     def goal_reached(self):
-        top_img = self.goal_binary[:self.goal_binary.shape[0] / 2, :]
-        return np.sum(top_img) > 15000 and self.presence[0] == 0
+        # top_img = self.goal_binary[:self.goal_binary.shape[0] / 2, :]
+        return np.sum(self.goal_binary) > 50000 and self.presence[0] == 0
 
     def run(self):
         try:
