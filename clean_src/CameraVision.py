@@ -222,7 +222,7 @@ class CameraVisionVectors(CameraVision):
         CameraVision.__init__(self, camera, logger)
         # Divide image in three pieces
         # define range of blue color in HSV
-        self.blue_lower = np.array([80, 60, 50])
+        self.blue_lower = np.array([80, 60, 20])
         self.blue_upper = np.array([120, 255, 255])
 
         # define range of red color in HSV
@@ -270,6 +270,13 @@ class CameraVisionVectors(CameraVision):
             upper_color = self.blue_upper
 
         binary = cv2.inRange(self.hsv, lower_color, upper_color)
+        
+        # if not check_puck:
+            # pickle.dump(binary, open('binary.p', 'wb'))
+            # import sys
+            # print 'Exiting...'
+            # sys.exit(0)
+        
         if check_puck == False:
             self.goal_binary = binary
         

@@ -78,15 +78,17 @@ class ForagingTask(NEATTask):
             energy_delta = GOAL_BONUS_SCALE * (self.prev_presence[2] - self.presence[2])
 
         if self.camera.goal_reached():
+            print '===== Goal reached!'
             stopThymio(self.thymioController)
 
-            self.thymioController.SendEventName('PlayFreq', [700, 0], reply_handler=dbusReply, error_handler=dbusError)
-            time.sleep(.3)
-            self.thymioController.SendEventName('PlayFreq', [700, -1], reply_handler=dbusReply, error_handler=dbusError)
-            time.sleep(0.1)
-
-            while not self.camera.readPuckPresence()[0] == 0:
-                time.sleep(.1)
+            while self.camera.readPuckPresence()[0] == 0:
+                print '===== Make sound'
+                self.thymioController.SendEventName('PlayFreq', [700, 0], reply_handler=dbusReply, error_handler=dbusError)
+                time.sleep(.3)
+                self.thymioController.SendEventName('PlayFreq', [0, -1], reply_handler=dbusReply, error_handler=dbusError)
+                time.sleep(.7)
+            
+            print '===== Exiting goal reached block'
             time.sleep(1)
             energy_delta = GOAL_REACHED_BONUS
 
