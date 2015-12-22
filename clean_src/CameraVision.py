@@ -222,8 +222,8 @@ class CameraVisionVectors(CameraVision):
         CameraVision.__init__(self, camera, logger)
         # Divide image in three pieces
         # define range of blue color in HSV
-        self.blue_lower = np.array([80, 60, 5])
-        self.blue_upper = np.array([120, 255, 255])
+        self.blue_lower = np.array([60, 50, 50])
+        self.blue_upper = np.array([200, 255, 255])
 
         # define range of red color in HSV
         # My value
@@ -231,8 +231,8 @@ class CameraVisionVectors(CameraVision):
         self.red_upper = np.array([180, 255, 255])
 
         # define range of green color in HSV
-        self.green_lower = np.array([30, 75, 75])
-        self.green_upper = np.array([60, 255, 255])
+        self.green_lower = np.array([20, 180, 20])
+        self.green_upper = np.array([45, 255, 255])
 
         # define range of white color in HSV
         test = 110
