@@ -9,17 +9,18 @@ from helpers import *
 from parameters import *
 
 class NEATTask:
-	def __init__(self, thymioController, debug=False, experimentName='NEAT_task', evaluations=1000, timeStep=0.005, activationFunction='tanh', popSize=1, generations=100, solvedAt=1000):
+	def __init__(self, thymioController, commit_sha, debug=False, experimentName='NEAT_task', evaluations=1000, timeStep=0.005, activationFunction='tanh', popSize=1, generations=100, solvedAt=1000):
 		self.thymioController = thymioController
 		self.logger = logging.getLogger('simulationLogger')
 		logLevel = logging.INFO
 		if debug:
 			logLevel = logging.DEBUG
 		self.logger.setLevel(logLevel)
+		self.experimentName = experimentName
 		outputDir = os.path.join(OUTPUT_PATH, experimentName)
 		mkdir_p(outputDir)
 		mkdir_p(PICKLED_DIR)
-		logFilename = os.path.join(outputDir, experimentName + '_sim_debug.log')
+		logFilename = os.path.join(outputDir, experimentName + '_' + commit_sha + '.log')
 		simHandler = logging.FileHandler(logFilename)
 		simHandler.setFormatter(FORMATTER)
 		self.logger.addHandler(simHandler)

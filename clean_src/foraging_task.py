@@ -12,6 +12,9 @@ import glib
 import dbus
 import dbus.mainloop.glib
 import time
+import sys
+import socket
+import thread
 
 EVALUATIONS = 1000
 MAX_MOTOR_SPEED = 300
@@ -36,9 +39,10 @@ AESL_PATH = os.path.join(CURRENT_FILE_PATH, 'asebaCommands.aesl')
 
 class ForagingTask(NEATTask):
 
-    def __init__(self, thymioController, debug=False, experimentName='NEAT_task', evaluations=1000, timeStep=0.005, activationFunction='tanh', popSize=1, generations=100, solvedAt=1000):
-        NEATTask.__init__(self, thymioController, debug, experimentName, evaluations, timeStep, activationFunction, popSize, generations, solvedAt)
+    def __init__(self, thymioController, commit_sha, debug=False, experimentName='NEAT_task', evaluations=1000, timeStep=0.005, activationFunction='tanh', popSize=1, generations=100, solvedAt=1000):
+        NEATTask.__init__(self, thymioController, commit_sha, debug, experimentName, evaluations, timeStep, activationFunction, popSize, generations, solvedAt)
         self.camera = CameraVisionVectors(False, self.logger)
+        self.thread_started = False
         
     def _step(self, evaluee, callback):
         presence_box = self.camera.readPuckPresence()
@@ -78,7 +82,8 @@ class ForagingTask(NEATTask):
         if self.presence[0] == 0:
             energy_delta = GOAL_BONUS_SCALE * (self.prev_presence[2] - self.presence[2])
         else:
-            print 'Puck lost!'
+            # print 'Puck lost!'
+            pass
 
         if self.camera.goal_reached() and self.presence[2] < 40:
             print '===== Goal reached!'
@@ -93,11 +98,15 @@ class ForagingTask(NEATTask):
             time.sleep(1)
             energy_delta = GOAL_REACHED_BONUS
 
-        if energy_delta: print('Energy delta %d' % energy_delta)
+        # if energy_delta: print('Energy delta %d' % energy_delta)
         
         return energy_delta
 
     def evaluate(self, evaluee):
+        if client and not self.thread_started:
+            thread.start_new_thread(check_stop, (self, ))
+            self.thread_started = True
+
         self.evaluations_taken = 0
         self.energy = INITIAL_ENERGY
         self.fitness = 0
@@ -146,6 +155,29 @@ class ForagingTask(NEATTask):
 
         return { 'fitness': fitness }
 
+    def exit(self, value = 0):
+        print 'Exiting...'
+        # sys.exit(value)
+        self.loop.quit()
+        thread.interrupt_main()
+
+
+def check_stop(task):
+    global client
+    f = client.makefile()
+    line = f.readline()
+    if line.startswith('stop'):
+        release_resources(task.thymioController)
+        task.exit(0)
+    task.thread_started = False
+
+def release_resources(thymio):
+    global serversocket
+    global client
+    serversocket.close()
+    if client: client.close()
+    stopThymio(thymio)
+
 
 if __name__ == '__main__':
     from peas.methods.neat import NEATPopulation, NEATGenotype
@@ -161,15 +193,33 @@ if __name__ == '__main__':
     thymioController.SendEventName('SetColor', [0, 0, 0, 0], reply_handler=dbusReply, error_handler=dbusError)
 
     debug = True
-    task = ForagingTask(thymioController, debug, EXPERIMENT_NAME)
-    
+    task = ForagingTask(thymioController, sys.argv[-1], debug, EXPERIMENT_NAME)
+
+    serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    serversocket.bind((sys.argv[-2], 1337))
+    serversocket.listen(5)
+    client = None
+    def set_client():
+        global client
+        print 'Waiting for socket connections...'
+        (client, address) = serversocket.accept()
+        print 'Got connection from', address
+    thread.start_new_thread(set_client, ())
+
     def epoch_callback(population):
         current_champ = population.champions[-1]
-        print 'Champion: ' + str(current_champ.get_network_data())
+        # print 'Champion: ' + str(current_champ.get_network_data())
 
         task.getLogger().info(', '.join([str(ind.stats['fitness']) for ind in population.population]))
 
-        # current_champ.visualize(os.path.join(CURRENT_FILE_PATH, 'img/obstacle_avoid_%d.jpg' % population.generation))
-        pickle.dump(current_champ, file(os.path.join(PICKLED_DIR, 'obstacle_avoid_%d.txt' % population.generation), 'w'))
+        # current_champ.visualize(os.path.join(CURRENT_FILE_PATH, 'img/' + task.experimentName + '_%d.jpg' % population.generation))
+        pickle.dump(current_champ, file(os.path.join(PICKLED_DIR, task.experimentName + '_%d.txt' % population.generation), 'w'))
 
-    pop.epoch(generations=GENERATIONS, evaluator=task, solution=task, callback=epoch_callback)
+    try:
+        pop.epoch(generations=GENERATIONS, evaluator=task, solution=task, callback=epoch_callback)
+    except KeyboardInterrupt:
+        release_resources(task.thymioController)
+        sys.exit(1)
+
+    release_resources(task.thymioController)
+    sys.exit(0)
