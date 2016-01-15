@@ -25,6 +25,8 @@ class NEATTask:
 		simHandler.setFormatter(FORMATTER)
 		self.logger.addHandler(simHandler)
 
+		self.jsonLogFilename = os.path.join(outputDir, experimentName + '_' + commit_sha + '.json')
+
 		self.evaluations = evaluations
 		self.timeStep = timeStep
 		self.activationFunction = activationFunction

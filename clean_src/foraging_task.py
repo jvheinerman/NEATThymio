@@ -11,6 +11,8 @@ import gobject
 import glib
 import dbus
 import dbus.mainloop.glib
+from copy import deepcopy
+import json
 import time
 import sys
 import socket
@@ -43,6 +45,7 @@ class ForagingTask(NEATTask):
         NEATTask.__init__(self, thymioController, commit_sha, debug, experimentName, evaluations, timeStep, activationFunction, popSize, generations, solvedAt)
         self.camera = CameraVisionVectors(False, self.logger)
         self.thread_started = False
+        self.individuals_evaluated = 0
         
     def _step(self, evaluee, callback):
         presence_box = self.camera.readPuckPresence()
@@ -76,14 +79,16 @@ class ForagingTask(NEATTask):
         if None in self.presence or None in self.prev_presence:
             return 0
 
+        if self.presence[0] == 0 and self.prev_presence[0] != 0:
+            self.getLogger().info(str(self.individuals_evaluated) + ' > Found puck')
+        elif self.presence[0] != 0 and self.prev_presence[0] == 0:
+            self.getLogger().info(str(self.individuals_evaluated) + ' > Lost puck')
+
         energy_delta = PUCK_BONUS_SCALE * (self.prev_presence[0] - self.presence[0])
         
         # print self.presence
         if self.presence[0] == 0:
             energy_delta = GOAL_BONUS_SCALE * (self.prev_presence[2] - self.presence[2])
-        else:
-            # print 'Puck lost!'
-            pass
 
         if self.camera.goal_reached() and self.presence[2] < 40:
             print '===== Goal reached!'
@@ -97,6 +102,8 @@ class ForagingTask(NEATTask):
             
             time.sleep(1)
             energy_delta = GOAL_REACHED_BONUS
+
+            self.getLogger().info(str(self.individuals_evaluated) + ' > Goal reached')
 
         # if energy_delta: print('Energy delta %d' % energy_delta)
         
@@ -153,6 +160,8 @@ class ForagingTask(NEATTask):
         self.camera.join()
         time.sleep(1)
 
+        self.individuals_evaluated += 1
+
         return { 'fitness': fitness }
 
     def exit(self, value = 0):
@@ -184,6 +193,35 @@ if __name__ == '__main__':
     genotype = lambda: NEATGenotype(inputs=5, outputs=2, types=[ACTIVATION_FUNC])
     pop = NEATPopulation(genotype, popsize=POPSIZE)
 
+    log = { 'neat': {}, 'generations': [] }
+
+    # log neat settings
+    dummy_individual = genotype()
+    log['neat'] = {
+        'evaluations': EVALUATIONS,
+        'activation_function': ACTIVATION_FUNC,
+        'popsize': POPSIZE,
+        'generations': GENERATIONS,
+        'initial_energy': INITIAL_ENERGY,
+        'max_energy': MAX_ENERGY,
+        'energy_decay': ENERGY_DECAY,
+        'max_steps': MAX_STEPS,
+        'pucl_bonus_scale': PUCK_BONUS_SCALE,
+        'goal_bonus_scale': GOAL_BONUS_SCALE,
+        'goal_reached_bonus': GOAL_REACHED_BONUS,
+        'elitism': pop.elitism,
+        'tournament_selection_k': pop.tournament_selection_k,
+        'initial_weight_stdev': dummy_individual.initial_weight_stdev,
+        'prob_add_node': dummy_individual.prob_add_node,
+        'prob_add_conn': dummy_individual.prob_add_conn,
+        'prob_mutate_weight': dummy_individual.prob_mutate_weight,
+        'prob_reset_weight': dummy_individual.prob_reset_weight,
+        'prob_reenable_conn': dummy_individual.prob_reenable_conn,
+        'prob_disable_conn': dummy_individual.prob_disable_conn,
+        'prob_reenable_parent': dummy_individual.prob_reenable_parent,
+        'weight_range': dummy_individual.weight_range
+    }
+
     dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
     bus = dbus.SessionBus()
     thymioController = dbus.Interface(bus.get_object('ch.epfl.mobots.Aseba', '/'), dbus_interface='ch.epfl.mobots.AsebaNetwork')
@@ -193,7 +231,8 @@ if __name__ == '__main__':
     thymioController.SendEventName('SetColor', [0, 0, 0, 0], reply_handler=dbusReply, error_handler=dbusError)
 
     debug = True
-    task = ForagingTask(thymioController, sys.argv[-1], debug, EXPERIMENT_NAME)
+    commit_sha = sys.argv[-1]
+    task = ForagingTask(thymioController, commit_sha, debug, EXPERIMENT_NAME)
 
     serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     serversocket.bind((sys.argv[-2], 1337))
@@ -207,13 +246,28 @@ if __name__ == '__main__':
     thread.start_new_thread(set_client, ())
 
     def epoch_callback(population):
-        current_champ = population.champions[-1]
-        # print 'Champion: ' + str(current_champ.get_network_data())
+        # update log
+        generation = { 'individuals': [], 'gen_number': population.generation }
+        for individual in population.population:
+            copied_connections = { str(key): value for key, value in individual.conn_genes.items() }
+            generation['individuals'].append({
+                'node_genes': deepcopy(individual.node_genes),
+                'conn_genes': copied_connections,
+                'stats': deepcopy(individual.stats)
+            })
+        champion_file = task.experimentName + '_%s_%d.p' % commit_sha, population.generation
+        generation['champion_file'] = champion_file
+        log['generations'].append(generation)
 
         task.getLogger().info(', '.join([str(ind.stats['fitness']) for ind in population.population]))
+        jsonLog = open(task.jsonLogFilename, "w")
+        json.dump(log, jsonLog)
+        jsonLog.close()
 
+        current_champ = population.champions[-1]
+        # print 'Champion: ' + str(current_champ.get_network_data())
         # current_champ.visualize(os.path.join(CURRENT_FILE_PATH, 'img/' + task.experimentName + '_%d.jpg' % population.generation))
-        pickle.dump(current_champ, file(os.path.join(PICKLED_DIR, task.experimentName + '_%d.txt' % population.generation), 'w'))
+        pickle.dump(current_champ, file(os.path.join(PICKLED_DIR, champion_file), 'w'))
 
     try:
         pop.epoch(generations=GENERATIONS, evaluator=task, solution=task, callback=epoch_callback)
