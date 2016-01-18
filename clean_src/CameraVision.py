@@ -222,7 +222,7 @@ class CameraVisionVectors(CameraVision):
         CameraVision.__init__(self, camera, logger)
         # Divide image in three pieces
         # define range of blue color in HSV
-        self.blue_lower = np.array([60, 50, 50])
+        self.blue_lower = np.array([60, 0, 0])
         self.blue_upper = np.array([200, 255, 255])
 
         # define range of red color in HSV
@@ -231,8 +231,8 @@ class CameraVisionVectors(CameraVision):
         self.red_upper = np.array([180, 255, 255])
 
         # define range of green color in HSV
-        self.green_lower = np.array([20, 180, 20])
-        self.green_upper = np.array([45, 255, 255])
+        self.green_lower = np.array([0, 180, 20])
+        self.green_upper = np.array([100, 255, 255])
 
         # define range of white color in HSV
         test = 110
@@ -309,6 +309,14 @@ class CameraVisionVectors(CameraVision):
                     self.hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
                     # Resize image
                     self.hsv = cv2.resize(self.hsv, (len(image[0]) / self.scale_down, len(image) / self.scale_down))
+
+                    cv2.imwrite('hsv.jpg', self.hsv)
+                    sys.exit(0)
+                    # print 'Bri: %d' % camera.brightness
+                    # print 'Con: %d' % camera.contrast
+                    # print 'Sat: %d' % camera.saturation
+                    # print 'Sha: %d' % camera.sharpness
+                    # print ''
 
                     # Calculate value to divide the image into three/four different part
                     valueDivision = math.floor((self.CAMERA_WIDTH / 3) / self.scale_down)

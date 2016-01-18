@@ -4,11 +4,11 @@ import glob
 
 image_files = sorted(glob.glob("hsv_*.jpg"))
 
-blue_lower = np.array([60, 50, 50])
+blue_lower = np.array([67, 0, 0])
 blue_upper = np.array([200, 255, 255])
 
-green_lower = np.array([20, 180, 20])
-green_upper = np.array([45, 255, 255])
+green_lower = np.array([0, 180, 20])
+green_upper = np.array([59, 255, 255])
 
 hsv1 = cv2.imread(image_files[0])
 for f_name in image_files[1:4]:
