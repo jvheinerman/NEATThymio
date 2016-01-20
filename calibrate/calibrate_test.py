@@ -4,7 +4,7 @@ import glob
 
 image_files = sorted(glob.glob("hsv_*.jpg"))
 
-blue_lower = np.array([67, 0, 0])
+blue_lower = np.array([67, 50, 50])
 blue_upper = np.array([200, 255, 255])
 
 green_lower = np.array([5, 170, 30])

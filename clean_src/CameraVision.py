@@ -222,7 +222,7 @@ class CameraVisionVectors(CameraVision):
         CameraVision.__init__(self, camera, logger)
         # Divide image in three pieces
         # define range of blue color in HSV
-        self.blue_lower = np.array([67, 0, 0])
+        self.blue_lower = np.array([67, 50, 50])
         self.blue_upper = np.array([200, 255, 255])
 
         # define range of red color in HSV
@@ -245,6 +245,8 @@ class CameraVisionVectors(CameraVision):
 
         self.blur = (19, 19)
 
+        self.merged_binary = None
+
     def find_shortest(self, binary, check_puck=False):
         # if object is not found
         if not binary.any():
@@ -263,7 +265,7 @@ class CameraVisionVectors(CameraVision):
 
         return shortest_dist, angle
 
-    def img_to_vector(self, check_puck=False):
+    def get_binary_img(self, check_puck=False):
         if check_puck:
             lower_color = self.green_lower
             upper_color = self.green_upper
@@ -271,16 +273,14 @@ class CameraVisionVectors(CameraVision):
             lower_color = self.blue_lower
             upper_color = self.blue_upper
 
-        binary = cv2.inRange(self.hsv, lower_color, upper_color)
-        
+        return cv2.inRange(self.hsv, lower_color, upper_color)
+
+    def img_to_vector(self, binary, check_puck=False):        
         # if not check_puck:
         #    pickle.dump(binary, open('binary.p', 'wb'))
         #    import sys
         #    print 'Exiting...'
         #    sys.exit(0)
-        
-        if check_puck == False:
-            self.goal_binary = binary
         
         dist, angle = self.find_shortest(binary, check_puck=check_puck)
 
@@ -312,8 +312,8 @@ class CameraVisionVectors(CameraVision):
                     # Resize image
                     self.hsv = cv2.resize(self.hsv, (len(image[0]) / self.scale_down, len(image) / self.scale_down))
 
-                    # cv2.imwrite('hsv.jpg', self.hsv)
-                    # sys.exit(0)
+                    cv2.imwrite('hsv.jpg', self.hsv)
+                    sys.exit(0)
 
                     # print 'Bri: %d' % camera.brightness
                     # print 'Con: %d' % camera.contrast
@@ -321,23 +321,14 @@ class CameraVisionVectors(CameraVision):
                     # print 'Sha: %d' % camera.sharpness
                     # print ''
 
-                    # Calculate value to divide the image into three/four different part
-                    valueDivision = math.floor((self.CAMERA_WIDTH / 3) / self.scale_down)
-                    valueDivisionVertical = math.floor((self.CAMERA_HEIGHT / 4) / self.scale_down)
+                    self.puck_binary = self.get_binary_img(check_puck=True)
+                    self.presence = self.img_to_vector(self.puck_binary, check_puck=True)
+                    
+                    self.goal_binary = self.get_binary_img()
+                    self.presenceGoal = self.img_to_vector(self.goal_binary)
 
-                    self.presence = self.img_to_vector(check_puck=True)
-                    self.presenceGoal = self.img_to_vector()
-
-                    # print("presenceRed {}".format(self.presence))
-                    # print("presenceBlack {}".format(self.presenceGoal))
-                    # print("presenceBlack {}".format(self.presenceGoal))
-
-                    if self.camera:
-                        cv2.imshow("ColourTrackerWindow", image)
-                    # cv2.imshow("sub_image_left", sub_image_left)
-                    # cv2.imshow("sub_image_central", sub_image_central)
-                    # cv2.imshow("sub_image_right", sub_image_right)
-                    # cv2.imshow("sub_image_bottom", sub_image_bottom)
+                    red = np.zeros(self.puck_binary.shape, np.uint8)
+                    self.merged_binary = np.dstack([self.goal_binary, self.puck_binary, red])
 
                     stream.truncate()
                     stream.seek(0)

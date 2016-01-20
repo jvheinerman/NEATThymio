@@ -44,7 +44,8 @@ class ForagingTask(NEATTask):
     def __init__(self, thymioController, commit_sha, debug=False, experimentName='NEAT_task', evaluations=1000, timeStep=0.005, activationFunction='tanh', popSize=1, generations=100, solvedAt=1000):
         NEATTask.__init__(self, thymioController, commit_sha, debug, experimentName, evaluations, timeStep, activationFunction, popSize, generations, solvedAt)
         self.camera = CameraVisionVectors(False, self.logger)
-        self.thread_started = False
+        self.ctrl_thread_started = False
+        self.img_thread_started = False
         self.individuals_evaluated = 0
         
     def _step(self, evaluee, callback):
@@ -53,6 +54,9 @@ class ForagingTask(NEATTask):
 
         # print presence_box, presence_goal
         if presence_goal and presence_box:
+            self.frame_rate_counter += 1
+            print 'Camera test', self.frame_rate_counter
+
             self.prev_presence = self.presence
             self.presence = tuple(presence_box) + tuple(presence_goal)
 
@@ -73,6 +77,10 @@ class ForagingTask(NEATTask):
         return max(self.evaluations_taken + self.energy, 1)
 
     def getEnergyDelta(self):
+        global img_client
+        if img_client and not self.camera.merged_binary is None:
+            send_image(img_client, self.camera.merged_binary)
+
         self.presence = [x if not x == -np.inf else self.camera.MAX_DISTANCE for x in self.presence]
         self.prev_presence = [x if not x == -np.inf else self.camera.MAX_DISTANCE for x in self.prev_presence]
 
@@ -110,9 +118,12 @@ class ForagingTask(NEATTask):
         return energy_delta
 
     def evaluate(self, evaluee):
-        if client and not self.thread_started:
+        self.frame_rate_counter = 0
+
+        global ctrl_client
+        if ctrl_client and not self.ctrl_thread_started:
             thread.start_new_thread(check_stop, (self, ))
-            self.thread_started = True
+            self.ctrl_thread_started = True
 
         self.evaluations_taken = 0
         self.energy = INITIAL_ENERGY
@@ -172,20 +183,46 @@ class ForagingTask(NEATTask):
 
 
 def check_stop(task):
-    global client
-    f = client.makefile()
+    global ctrl_client
+    f = ctrl_client.makefile()
     line = f.readline()
     if line.startswith('stop'):
         release_resources(task.thymioController)
         task.exit(0)
-    task.thread_started = False
+    task.ctrl_thread_started = False
 
 def release_resources(thymio):
-    global serversocket
-    global client
-    serversocket.close()
-    if client: client.close()
+    global ctrl_serversocket
+    global ctrl_client
+    ctrl_serversocket.close()
+    if ctrl_client: ctrl_client.close()
+    
+    global img_serversocket
+    global img_client
+    img_serversocket.close()
+    if img_client: img_client.close()
+
     stopThymio(thymio)
+
+def write_header(client, boundary='thymio'):
+    client.send("HTTP/1.0 200 OK\r\n" +
+            "Connection: close\r\n" +
+            "Max-Age: 0\r\n" +
+            "Expires: 0\r\n" +
+            "Cache-Control: no-store, no-cache, must-revalidate, pre-check=0, post-check=0, max-age=0\r\n" +
+            "Pragma: no-cache\r\n" +
+            "Content-Type: multipart/x-mixed-replace; " +
+            "boundary=" + boundary + "\r\n" +
+            "\r\n" +
+            "--" + boundary + "\r\n")
+
+def send_image(client, image, boundary='thymio'):
+    _, encoded = cv2.imencode('.png', image)
+    image_bytes = bytearray(np.asarray(encoded))
+    client.send("Content-type: image/png\r\n")
+    client.send("Content-Length: %d\r\n\r\n" % len(image_bytes))
+    client.send(image_bytes)
+    client.send("\r\n--" + boundary + "\r\n")
 
 
 if __name__ == '__main__':
@@ -234,16 +271,28 @@ if __name__ == '__main__':
     commit_sha = sys.argv[-1]
     task = ForagingTask(thymioController, commit_sha, debug, EXPERIMENT_NAME)
 
-    serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    serversocket.bind((sys.argv[-2], 1337))
-    serversocket.listen(5)
-    client = None
+    ctrl_serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    ctrl_serversocket.bind((sys.argv[-2], 1337))
+    ctrl_serversocket.listen(5)
+    ctrl_client = None
     def set_client():
-        global client
-        print 'Waiting for socket connections...'
-        (client, address) = serversocket.accept()
-        print 'Got connection from', address
+        global ctrl_client
+        print 'Control server: waiting for socket connections...'
+        (ctrl_client, address) = ctrl_serversocket.accept()
+        print 'Control server: got connection from', address
     thread.start_new_thread(set_client, ())
+
+    img_serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    img_serversocket.bind((sys.argv[-2], 31337))
+    img_serversocket.listen(5)
+    img_client = None
+    def set_img_client():
+        global img_client
+        print 'Image server: waiting for socket connections...'
+        (img_client, address) = img_serversocket.accept()
+        print 'Image server: got connection from', address
+        write_header(img_client)
+    thread.start_new_thread(set_img_client, ())
 
     def epoch_callback(population):
         # update log
@@ -255,7 +304,7 @@ if __name__ == '__main__':
                 'conn_genes': copied_connections,
                 'stats': deepcopy(individual.stats)
             })
-        champion_file = task.experimentName + '_%s_%d.p' % commit_sha, population.generation
+        champion_file = task.experimentName + '_%s_%d.p'.format(commit_sha, population.generation)
         generation['champion_file'] = champion_file
         log['generations'].append(generation)
 
