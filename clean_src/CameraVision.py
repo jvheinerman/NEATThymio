@@ -222,7 +222,7 @@ class CameraVisionVectors(CameraVision):
         CameraVision.__init__(self, camera, logger)
         # Divide image in three pieces
         # define range of blue color in HSV
-        self.blue_lower = np.array([60, 0, 0])
+        self.blue_lower = np.array([67, 0, 0])
         self.blue_upper = np.array([200, 255, 255])
 
         # define range of red color in HSV
@@ -231,8 +231,8 @@ class CameraVisionVectors(CameraVision):
         self.red_upper = np.array([180, 255, 255])
 
         # define range of green color in HSV
-        self.green_lower = np.array([0, 180, 20])
-        self.green_upper = np.array([100, 255, 255])
+        self.green_lower = np.array([5, 170, 30])
+        self.green_upper = np.array([55, 255, 255])
 
         # define range of white color in HSV
         test = 110
@@ -242,6 +242,8 @@ class CameraVisionVectors(CameraVision):
         # define range of black color in HSV
         self.black_lower = np.array([0, 0, 0])
         self.black_upper = np.array([180, 255, 30])
+
+        self.blur = (19, 19)
 
     def find_shortest(self, binary, check_puck=False):
         # if object is not found
@@ -305,13 +307,14 @@ class CameraVisionVectors(CameraVision):
                     image = cv2.imdecode(data, 1)
 
                     # Convert BGR to HSV
-                    image = cv2.GaussianBlur(image, (5, 5), 0)
+                    image = cv2.GaussianBlur(image, self.blur, 0)
                     self.hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
                     # Resize image
                     self.hsv = cv2.resize(self.hsv, (len(image[0]) / self.scale_down, len(image) / self.scale_down))
 
-                    cv2.imwrite('hsv.jpg', self.hsv)
-                    sys.exit(0)
+                    # cv2.imwrite('hsv.jpg', self.hsv)
+                    # sys.exit(0)
+
                     # print 'Bri: %d' % camera.brightness
                     # print 'Con: %d' % camera.contrast
                     # print 'Sat: %d' % camera.saturation
