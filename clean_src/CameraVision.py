@@ -312,8 +312,8 @@ class CameraVisionVectors(CameraVision):
                     # Resize image
                     self.hsv = cv2.resize(self.hsv, (len(image[0]) / self.scale_down, len(image) / self.scale_down))
 
-                    cv2.imwrite('hsv.jpg', self.hsv)
-                    sys.exit(0)
+                    # cv2.imwrite('hsv.jpg', self.hsv)
+                    # sys.exit(0)
 
                     # print 'Bri: %d' % camera.brightness
                     # print 'Con: %d' % camera.contrast

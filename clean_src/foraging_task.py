@@ -54,8 +54,8 @@ class ForagingTask(NEATTask):
 
         # print presence_box, presence_goal
         if presence_goal and presence_box:
-            self.frame_rate_counter += 1
-            print 'Camera test', self.frame_rate_counter
+            # self.frame_rate_counter += 1
+            # print 'Camera test', self.frame_rate_counter
 
             self.prev_presence = self.presence
             self.presence = tuple(presence_box) + tuple(presence_goal)
@@ -304,8 +304,9 @@ if __name__ == '__main__':
                 'conn_genes': copied_connections,
                 'stats': deepcopy(individual.stats)
             })
-        champion_file = task.experimentName + '_%s_%d.p'.format(commit_sha, population.generation)
+        champion_file = task.experimentName + '_{}_{}.p'.format(commit_sha, population.generation)
         generation['champion_file'] = champion_file
+        generation['species'] = [len(species.members) for species in population.species]
         log['generations'].append(generation)
 
         task.getLogger().info(', '.join([str(ind.stats['fitness']) for ind in population.population]))
