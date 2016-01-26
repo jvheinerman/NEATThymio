@@ -244,8 +244,8 @@ class CameraVisionVectors(CameraVision):
         self.black_upper = np.array([180, 255, 30])
 
         self.blur = (19, 19)
-
         self.merged_binary = None
+        self.img_ready = False
 
     def find_shortest(self, binary, check_puck=False):
         # if object is not found
@@ -329,6 +329,8 @@ class CameraVisionVectors(CameraVision):
 
                     red = np.zeros(self.puck_binary.shape, np.uint8)
                     self.merged_binary = np.dstack([self.goal_binary, self.puck_binary, red])
+
+                    self.img_ready = True
 
                     stream.truncate()
                     stream.seek(0)

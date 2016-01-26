@@ -49,12 +49,16 @@ class ForagingTask(NEATTask):
         self.individuals_evaluated = 0
         
     def _step(self, evaluee, callback):
+        while not self.camera.img_ready:
+            time.sleep(.01)
+
         presence_box = self.camera.readPuckPresence()
         presence_goal = self.camera.readGoalPresence()
+        self.camera.img_ready = False
 
         # print presence_box, presence_goal
         if presence_goal and presence_box:
-            # self.frame_rate_counter += 1
+            # self.frame_rate_counter += 1
             # print 'Camera test', self.frame_rate_counter
 
             self.prev_presence = self.presence
@@ -307,6 +311,7 @@ if __name__ == '__main__':
         champion_file = task.experimentName + '_{}_{}.p'.format(commit_sha, population.generation)
         generation['champion_file'] = champion_file
         generation['species'] = [len(species.members) for species in population.species]
+        print generation['species']
         log['generations'].append(generation)
 
         task.getLogger().info(', '.join([str(ind.stats['fitness']) for ind in population.population]))
