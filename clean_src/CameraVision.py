@@ -231,8 +231,8 @@ class CameraVisionVectors(CameraVision):
         self.red_upper = np.array([180, 255, 255])
 
         # define range of green color in HSV
-        self.green_lower = np.array([5, 170, 30])
-        self.green_upper = np.array([55, 255, 255])
+        self.green_lower = np.array([15, 190, 30])
+        self.green_upper = np.array([55, 255, 155])
 
         # define range of white color in HSV
         test = 110

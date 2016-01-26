@@ -7,8 +7,8 @@ image_files = sorted(glob.glob("hsv_*.jpg"))
 blue_lower = np.array([67, 50, 50])
 blue_upper = np.array([200, 255, 255])
 
-green_lower = np.array([5, 170, 30])
-green_upper = np.array([55, 255, 255])
+green_lower = np.array([15, 190, 30])
+green_upper = np.array([55, 255, 155])
 
 # already blurred (5, 5)!
 blur = (15, 15)
