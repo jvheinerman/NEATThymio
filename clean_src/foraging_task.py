@@ -29,7 +29,7 @@ EXPERIMENT_NAME = 'NEAT_foraging_task'
 
 INITIAL_ENERGY = 500
 MAX_ENERGY = 1000
-ENERGY_DECAY = 1
+ENERGY_DECAY = 5
 MAX_STEPS = 10000
 
 PUCK_BONUS_SCALE = 3
@@ -239,6 +239,7 @@ if __name__ == '__main__':
     # log neat settings
     dummy_individual = genotype()
     log['neat'] = {
+        'max_speed': MAX_MOTOR_SPEED,
         'evaluations': EVALUATIONS,
         'activation_function': ACTIVATION_FUNC,
         'popsize': POPSIZE,
