@@ -24,6 +24,7 @@ TIME_STEP = 0.005
 ACTIVATION_FUNC = 'tanh'
 POPSIZE = 20
 GENERATIONS = 100
+TARGET_SPECIES = 3
 SOLVED_AT = EVALUATIONS * 2
 EXPERIMENT_NAME = 'NEAT_foraging_task'
 
@@ -242,7 +243,7 @@ if __name__ == '__main__':
         stdev_mutate_bias=.25,
         stdev_mutate_response=.25,
         feedforward=False)
-    pop = NEATPopulation(genotype, popsize=POPSIZE)
+    pop = NEATPopulation(genotype, popsize=POPSIZE, target_species=TARGET_SPECIES)
 
     log = { 'neat': {}, 'generations': [] }
 
@@ -263,6 +264,7 @@ if __name__ == '__main__':
         'goal_reached_bonus': GOAL_REACHED_BONUS,
         'elitism': pop.elitism,
         'tournament_selection_k': pop.tournament_selection_k,
+        'target_species': pop.target_species,
         'feedforward': dummy_individual.feedforward,
         'initial_weight_stdev': dummy_individual.initial_weight_stdev,
         'prob_add_node': dummy_individual.prob_add_node,

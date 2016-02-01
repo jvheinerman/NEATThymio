@@ -23,8 +23,9 @@ import sys
 EVALUATIONS = 1000
 TIME_STEP = 0.005
 ACTIVATION_FUNC = 'tanh'
-POPSIZE = 20
+POPSIZE = 1
 GENERATIONS = 100
+TARGET_SPECIES = 3
 SOLVED_AT = EVALUATIONS * 2
 EXPERIMENT_NAME = 'NEAT_obstacle_avoidance'
 
@@ -38,8 +39,8 @@ AESL_PATH = os.path.join(CURRENT_FILE_PATH, 'asebaCommands.aesl')
 
 class ObstacleAvoidance(NEATTask):
 
-    def __init__(self, thymioController, commit_sha, debug=False, experimentName='NEAT_task', evaluations=1000, timeStep=0.005, activationFunction='tanh', popSize=1, generations=100, solvedAt=1000):
-        NEATTask.__init__(self, thymioController, commit_sha, debug=False, experimentName='NEAT_task', evaluations=1000, timeStep=0.005, activationFunction='tanh', popSize=1, generations=100, solvedAt=1000)
+    def __init__(self, thymioController, commit_sha, debug=False, experimentName=EXPERIMENT_NAME, evaluations=1000, timeStep=0.005, activationFunction='tanh', popSize=1, generations=100, solvedAt=1000):
+        NEATTask.__init__(self, thymioController, commit_sha, debug, experimentName, evaluations, timeStep, activationFunction, popSize, generations, solvedAt)
 
     def evaluate(self, evaluee):
         global ctrl_client
@@ -47,7 +48,7 @@ class ObstacleAvoidance(NEATTask):
             thread.start_new_thread(check_stop, (self, ))
             self.ctrl_thread_started = True
 
-        self.super(evaluee)
+        return NEATTask.evaluate(self, evaluee)
 
     def _step(self, evaluee, callback):
         def ok_call(psValues):
@@ -111,7 +112,7 @@ def release_resources(thymio):
 if __name__ == '__main__':
     from peas.methods.neat import NEATPopulation, NEATGenotype
     genotype = lambda: NEATGenotype(inputs=6, outputs=2, types=[ACTIVATION_FUNC])
-    pop = NEATPopulation(genotype, popsize=POPSIZE)
+    pop = NEATPopulation(genotype, popsize=POPSIZE, target_species=TARGET_SPECIES)
 
     # log neat settings
     log = { 'neat': {}, 'generations': [] }
@@ -124,6 +125,7 @@ if __name__ == '__main__':
         'generations': GENERATIONS,
         'elitism': pop.elitism,
         'tournament_selection_k': pop.tournament_selection_k,
+        'target_species': pop.target_species,
         'feedforward': dummy_individual.feedforward,
         'initial_weight_stdev': dummy_individual.initial_weight_stdev,
         'prob_add_node': dummy_individual.prob_add_node,
@@ -184,7 +186,7 @@ if __name__ == '__main__':
         jsonLog.close()
 
     try:
-        pop.epoch(generations=GENERATIONS, evaluator=task, solution=task, callback=epoch_callback)
+        pop.epoch(generations=GENERATIONS, evaluator=task, callback=epoch_callback)
     except KeyboardInterrupt:
         release_resources(task.thymioController)
         sys.exit(1)
