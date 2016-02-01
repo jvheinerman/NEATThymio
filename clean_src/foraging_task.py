@@ -231,7 +231,16 @@ def send_image(client, image, boundary='thymio'):
 
 if __name__ == '__main__':
     from peas.methods.neat import NEATPopulation, NEATGenotype
-    genotype = lambda: NEATGenotype(inputs=5, outputs=2, types=[ACTIVATION_FUNC])
+    genotype = lambda: NEATGenotype(
+        inputs=5,
+        outputs=2, 
+        types=[ACTIVATION_FUNC], 
+        prob_add_node=0.1, 
+        weight_range=(-3, 3),
+        stdev_mutate_weight=.25,
+        stdev_mutate_bias=.25,
+        stdev_mutate_response=.25,
+        feedforward=False)
     pop = NEATPopulation(genotype, popsize=POPSIZE)
 
     log = { 'neat': {}, 'generations': [] }
@@ -248,11 +257,12 @@ if __name__ == '__main__':
         'max_energy': MAX_ENERGY,
         'energy_decay': ENERGY_DECAY,
         'max_steps': MAX_STEPS,
-        'pucl_bonus_scale': PUCK_BONUS_SCALE,
+        'puck_bonus_scale': PUCK_BONUS_SCALE,
         'goal_bonus_scale': GOAL_BONUS_SCALE,
         'goal_reached_bonus': GOAL_REACHED_BONUS,
         'elitism': pop.elitism,
         'tournament_selection_k': pop.tournament_selection_k,
+        'feedforward': dummy_individual.feedforward,
         'initial_weight_stdev': dummy_individual.initial_weight_stdev,
         'prob_add_node': dummy_individual.prob_add_node,
         'prob_add_conn': dummy_individual.prob_add_conn,
@@ -261,6 +271,9 @@ if __name__ == '__main__':
         'prob_reenable_conn': dummy_individual.prob_reenable_conn,
         'prob_disable_conn': dummy_individual.prob_disable_conn,
         'prob_reenable_parent': dummy_individual.prob_reenable_parent,
+        'stdev_mutate_weight': dummy_individual.stdev_mutate_weight,
+        'stdev_mutate_bias': dummy_individual.stdev_mutate_bias,
+        'stdev_mutate_response': dummy_individual.stdev_mutate_response,
         'weight_range': dummy_individual.weight_range
     }
 

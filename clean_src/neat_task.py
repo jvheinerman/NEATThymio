@@ -45,7 +45,7 @@ class NEATTask:
 			task.fitness += fit
 		def main_lambda(task):
 			if task.evaluations_taken == self.evaluations:
-				stopThymio(thymioController)
+				stopThymio(self.thymioController)
 				task.loop.quit()
 				return False 
 			ret_value =  self._step(evaluee, lambda (fit): update_fitness(self, fit))
