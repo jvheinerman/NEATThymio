@@ -19,7 +19,7 @@ import socket
 import thread
 
 EVALUATIONS = 1000
-MAX_MOTOR_SPEED = 300
+MAX_MOTOR_SPEED = 150
 TIME_STEP = 0.005
 ACTIVATION_FUNC = 'tanh'
 POPSIZE = 20
@@ -29,11 +29,11 @@ EXPERIMENT_NAME = 'NEAT_foraging_task'
 
 INITIAL_ENERGY = 500
 MAX_ENERGY = 1000
-ENERGY_DECAY = 5
+ENERGY_DECAY = 10
 MAX_STEPS = 10000
 
-PUCK_BONUS_SCALE = 3
-GOAL_BONUS_SCALE = 3
+PUCK_BONUS_SCALE = 6
+GOAL_BONUS_SCALE = 6
 GOAL_REACHED_BONUS = INITIAL_ENERGY
 
 CURRENT_FILE_PATH = os.path.abspath(os.path.dirname(__file__))
@@ -52,7 +52,8 @@ class ForagingTask(NEATTask):
         while not self.camera.img_ready:
             time.sleep(.01)
 
-        presence_box = self.camera.readPuckPresence()
+        # presence_box = self.camera.readPuckPresence()
+        presence_box = (0, 0)
         presence_goal = self.camera.readGoalPresence()
         self.camera.img_ready = False
 
@@ -70,7 +71,7 @@ class ForagingTask(NEATTask):
             out = NeuralNetwork(evaluee).feed(inputs)
             left, right = list(out[-2:])
             motorspeed = { 'left': left, 'right': right }
-            writeMotorSpeed(self.thymioController, motorspeed)
+            writeMotorSpeed(self.thymioController, motorspeed, max_speed=MAX_MOTOR_SPEED)
         else:
             time.sleep(.1)
 

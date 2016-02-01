@@ -41,6 +41,14 @@ class ObstacleAvoidance(NEATTask):
     def __init__(self, thymioController, commit_sha, debug=False, experimentName='NEAT_task', evaluations=1000, timeStep=0.005, activationFunction='tanh', popSize=1, generations=100, solvedAt=1000):
         NEATTask.__init__(self, thymioController, commit_sha, debug=False, experimentName='NEAT_task', evaluations=1000, timeStep=0.005, activationFunction='tanh', popSize=1, generations=100, solvedAt=1000)
 
+    def evaluate(self, evaluee):
+        global ctrl_client
+        if ctrl_client and not self.ctrl_thread_started:
+            thread.start_new_thread(check_stop, (self, ))
+            self.ctrl_thread_started = True
+
+        self.super(evaluee)
+
     def _step(self, evaluee, callback):
         def ok_call(psValues):
             psValues = np.array([psValues[0], psValues[2], psValues[4], psValues[5], psValues[6], 1])
@@ -81,6 +89,15 @@ class ObstacleAvoidance(NEATTask):
         # fitness for 1 timestep in [-2, 2]
         return float(motorspeed['left'] + motorspeed['right']) * (1 - speedpenalty) * (1 - sensorpenalty)
 
+
+def check_stop(task):
+    global ctrl_client
+    f = ctrl_client.makefile()
+    line = f.readline()
+    if line.startswith('stop'):
+        release_resources(task.thymioController)
+        task.exit(0)
+    task.ctrl_thread_started = False
 
 def release_resources(thymio):
     global ctrl_serversocket
