@@ -40,7 +40,6 @@ class ObstacleAvoidance(NEATTask):
 
     def __init__(self, thymioController, commit_sha, debug=False, experimentName='NEAT_task', evaluations=1000, timeStep=0.005, activationFunction='tanh', popSize=1, generations=100, solvedAt=1000):
         NEATTask.__init__(self, thymioController, commit_sha, debug=False, experimentName='NEAT_task', evaluations=1000, timeStep=0.005, activationFunction='tanh', popSize=1, generations=100, solvedAt=1000)
-        self.time = time.time()
 
     def _step(self, evaluee, callback):
         def ok_call(psValues):
@@ -53,8 +52,6 @@ class ObstacleAvoidance(NEATTask):
             writeMotorSpeed(self.thymioController, motorspeed)
 
             callback(self.getFitness(motorspeed, psValues))
-            if self.debug: print time.time() - self.time
-            self.time = time.time()
 
         def nok_call():
             print " Error while reading proximity sensors"
