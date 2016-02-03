@@ -24,17 +24,17 @@ TIME_STEP = 0.005
 ACTIVATION_FUNC = 'tanh'
 POPSIZE = 20
 GENERATIONS = 100
-TARGET_SPECIES = 3
+TARGET_SPECIES = 8
 SOLVED_AT = EVALUATIONS * 2
 EXPERIMENT_NAME = 'NEAT_foraging_task'
 
-INITIAL_ENERGY = 500
-MAX_ENERGY = 1000
-ENERGY_DECAY = 10
+INITIAL_ENERGY = 100
+MAX_ENERGY = 200
+ENERGY_DECAY = 2
 MAX_STEPS = 10000
 
-PUCK_BONUS_SCALE = 6
-GOAL_BONUS_SCALE = 6
+PUCK_BONUS_SCALE = 2
+GOAL_BONUS_SCALE = 2
 GOAL_REACHED_BONUS = INITIAL_ENERGY
 
 CURRENT_FILE_PATH = os.path.abspath(os.path.dirname(__file__))
@@ -48,7 +48,7 @@ class ForagingTask(TaskEvaluator):
         self.ctrl_thread_started = False
         self.img_thread_started = False
         self.individuals_evaluated = 0
-        
+
     def _step(self, evaluee, callback):
         while not self.camera.img_ready:
             time.sleep(.01)
