@@ -53,8 +53,7 @@ class ForagingTask(TaskEvaluator):
         while not self.camera.img_ready:
             time.sleep(.01)
 
-        # presence_box = self.camera.readPuckPresence()
-        presence_box = (0, 0)
+        presence_box = self.camera.readPuckPresence()
         presence_goal = self.camera.readGoalPresence()
         self.camera.img_ready = False
 
