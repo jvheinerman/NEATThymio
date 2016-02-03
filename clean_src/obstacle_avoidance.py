@@ -12,7 +12,7 @@ import pickle
 import parameters as pr
 import classes
 from helpers import *
-from neat_task import NEATTask
+from task_evaluator import TaskEvaluator
 from peas.networks.rnn import NeuralNetwork
 import thread
 import socket
@@ -23,9 +23,9 @@ import sys
 EVALUATIONS = 1000
 TIME_STEP = 0.005
 ACTIVATION_FUNC = 'tanh'
-POPSIZE = 1
+POPSIZE = 10
 GENERATIONS = 100
-TARGET_SPECIES = 3
+TARGET_SPECIES = 2
 SOLVED_AT = EVALUATIONS * 2
 EXPERIMENT_NAME = 'NEAT_obstacle_avoidance'
 
@@ -37,10 +37,11 @@ FORMATTER = logging.Formatter('%(asctime)s - %(levelname)s: %(message)s')
 AESL_PATH = os.path.join(CURRENT_FILE_PATH, 'asebaCommands.aesl')
 
 
-class ObstacleAvoidance(NEATTask):
+class ObstacleAvoidance(TaskEvaluator):
 
     def __init__(self, thymioController, commit_sha, debug=False, experimentName=EXPERIMENT_NAME, evaluations=1000, timeStep=0.005, activationFunction='tanh', popSize=1, generations=100, solvedAt=1000):
-        NEATTask.__init__(self, thymioController, commit_sha, debug, experimentName, evaluations, timeStep, activationFunction, popSize, generations, solvedAt)
+        TaskEvaluator.__init__(self, thymioController, commit_sha, debug, experimentName, evaluations, timeStep, activationFunction, popSize, generations, solvedAt)
+        self.ctrl_thread_started = False
 
     def evaluate(self, evaluee):
         global ctrl_client
@@ -48,7 +49,7 @@ class ObstacleAvoidance(NEATTask):
             thread.start_new_thread(check_stop, (self, ))
             self.ctrl_thread_started = True
 
-        return NEATTask.evaluate(self, evaluee)
+        return TaskEvaluator.evaluate(self, evaluee)
 
     def _step(self, evaluee, callback):
         def ok_call(psValues):
@@ -112,7 +113,8 @@ def release_resources(thymio):
 if __name__ == '__main__':
     from peas.methods.neat import NEATPopulation, NEATGenotype
     genotype = lambda: NEATGenotype(
-        inputs=6, outputs=2, types=[ACTIVATION_FUNC]
+        inputs=6, outputs=2,
+        types=[ACTIVATION_FUNC],
         prob_add_node=0.1, 
         weight_range=(-3, 3),
         stdev_mutate_weight=.25,

@@ -2,7 +2,7 @@
 
 from helpers import *
 from parameters import *
-from neat_task import NEATTask
+from task_evaluator import TaskEvaluator
 from CameraVision import *
 import classes as cl
 from peas.networks.rnn import NeuralNetwork
@@ -40,10 +40,10 @@ GOAL_REACHED_BONUS = INITIAL_ENERGY
 CURRENT_FILE_PATH = os.path.abspath(os.path.dirname(__file__))
 AESL_PATH = os.path.join(CURRENT_FILE_PATH, 'asebaCommands.aesl')
 
-class ForagingTask(NEATTask):
+class ForagingTask(TaskEvaluator):
 
     def __init__(self, thymioController, commit_sha, debug=False, experimentName='NEAT_task', evaluations=1000, timeStep=0.005, activationFunction='tanh', popSize=1, generations=100, solvedAt=1000):
-        NEATTask.__init__(self, thymioController, commit_sha, debug, experimentName, evaluations, timeStep, activationFunction, popSize, generations, solvedAt)
+        TaskEvaluator.__init__(self, thymioController, commit_sha, debug, experimentName, evaluations, timeStep, activationFunction, popSize, generations, solvedAt)
         self.camera = CameraVisionVectors(False, self.logger)
         self.ctrl_thread_started = False
         self.img_thread_started = False
@@ -180,12 +180,6 @@ class ForagingTask(NEATTask):
         self.individuals_evaluated += 1
 
         return { 'fitness': fitness }
-
-    def exit(self, value = 0):
-        print 'Exiting...'
-        # sys.exit(value)
-        self.loop.quit()
-        thread.interrupt_main()
 
 
 def check_stop(task):
