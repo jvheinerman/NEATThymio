@@ -185,7 +185,6 @@ if __name__ == '__main__':
         champion_file = task.experimentName + '_{}_{}.p'.format(commit_sha, population.generation)
         generation['champion_file'] = champion_file
         generation['species'] = [len(species.members) for species in population.species]
-        print generation['species']
         log['generations'].append(generation)
 
         task.getLogger().info(', '.join([str(ind.stats['fitness']) for ind in population.population]))
