@@ -111,7 +111,13 @@ def release_resources(thymio):
 
 if __name__ == '__main__':
     from peas.methods.neat import NEATPopulation, NEATGenotype
-    genotype = lambda: NEATGenotype(inputs=6, outputs=2, types=[ACTIVATION_FUNC])
+    genotype = lambda: NEATGenotype(
+        inputs=6, outputs=2, types=[ACTIVATION_FUNC]
+        prob_add_node=0.1, 
+        weight_range=(-3, 3),
+        stdev_mutate_weight=.25,
+        stdev_mutate_bias=.25,
+        stdev_mutate_response=.25)
     pop = NEATPopulation(genotype, popsize=POPSIZE, target_species=TARGET_SPECIES)
 
     # log neat settings
