@@ -32,10 +32,12 @@ INITIAL_ENERGY = 100
 MAX_ENERGY = 200
 ENERGY_DECAY = 2
 MAX_STEPS = 10000
+EXPECTED_FPS = 4
 
-PUCK_BONUS_SCALE = 2
-GOAL_BONUS_SCALE = 2
+PUCK_BONUS_SCALE = 5
+GOAL_BONUS_SCALE = 5
 GOAL_REACHED_BONUS = INITIAL_ENERGY
+BACKWARD_PUNISH_SCALE = 20
 
 CURRENT_FILE_PATH = os.path.abspath(os.path.dirname(__file__))
 AESL_PATH = os.path.join(CURRENT_FILE_PATH, 'asebaCommands.aesl')
@@ -70,10 +72,10 @@ class ForagingTask(TaskEvaluator):
 
             out = NeuralNetwork(evaluee).feed(inputs)
             left, right = list(out[-2:])
-            motorspeed = { 'left': left, 'right': right }
-            writeMotorSpeed(self.thymioController, motorspeed, max_speed=MAX_MOTOR_SPEED)
+            self.motorspeed = { 'left': left, 'right': right }
+            writeMotorSpeed(self.thymioController, self.motorspeed, max_speed=MAX_MOTOR_SPEED)
         else:
-            time.sleep(.1)
+            time.sleep(.001)
 
         callback(self.getEnergyDelta())
         return True
@@ -83,8 +85,13 @@ class ForagingTask(TaskEvaluator):
 
     def getEnergyDelta(self):
         global img_client
-        if img_client and not self.camera.merged_binary is None:
-            send_image(img_client, self.camera.merged_binary)
+        if img_client and not self.camera.binary_channels is None:
+            send_image(img_client, self.camera.binary_channels, self.energy)
+
+        speedpenalty = 0
+        if self.motorspeed['left'] < 0 and self.motorspeed['right'] < 0:
+            speedpenalty = (self.motorspeed['left'] / float(MAX_MOTOR_SPEED)) * (self.motorspeed['right'] / MAX_MOTOR_SPEED)
+            speedpenalty = np.sqrt(speedpenalty) * BACKWARD_PUNISH_SCALE
 
         self.presence = [x if not x == -np.inf else self.camera.MAX_DISTANCE for x in self.presence]
         self.prev_presence = [x if not x == -np.inf else self.camera.MAX_DISTANCE for x in self.prev_presence]
@@ -97,11 +104,11 @@ class ForagingTask(TaskEvaluator):
         elif self.presence[0] != 0 and self.prev_presence[0] == 0:
             self.getLogger().info(str(self.individuals_evaluated) + ' > Lost puck')
 
-        energy_delta = PUCK_BONUS_SCALE * (self.prev_presence[0] - self.presence[0])
-        
+        energy_delta = speedpenalty + PUCK_BONUS_SCALE * (self.prev_presence[0] - self.presence[0]) * EXPECTED_FPS * (time.time() - self.step_time)
+
         # print self.presence
         if self.presence[0] == 0:
-            energy_delta = GOAL_BONUS_SCALE * (self.prev_presence[2] - self.presence[2])
+            energy_delta = speedpenalty + GOAL_BONUS_SCALE * (self.prev_presence[2] - self.presence[2]) * EXPECTED_FPS * (time.time() - self.step_time)
 
         if self.camera.goal_reached() and self.presence[2] < 40:
             print '===== Goal reached!'
@@ -120,10 +127,13 @@ class ForagingTask(TaskEvaluator):
 
         # if energy_delta: print('Energy delta %d' % energy_delta)
         
+        self.step_time = time.time()
+
         return energy_delta
 
     def evaluate(self, evaluee):
         self.frame_rate_counter = 0
+        self.step_time = time.time()
 
         global ctrl_client
         if ctrl_client and not self.ctrl_thread_started:
@@ -215,7 +225,10 @@ def write_header(client, boundary='thymio'):
             "\r\n" +
             "--" + boundary + "\r\n")
 
-def send_image(client, image, boundary='thymio'):
+def send_image(client, binary_channels, energy, boundary='thymio'):
+    red = np.zeros(binary_channels[0].shape, np.uint8)
+    cv2.putText(red, 'E: {0:.2f}'.format(energy), (5, 20), cv2.FONT_HERSHEY_PLAIN, 1, (255, ), 1, 255)
+    image = np.dstack(binary_channels + [red])
     _, encoded = cv2.imencode('.png', image)
     image_bytes = bytearray(np.asarray(encoded))
     client.send("Content-type: image/png\r\n")
