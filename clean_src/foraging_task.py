@@ -3,7 +3,7 @@
 from helpers import *
 from parameters import *
 from task_evaluator import TaskEvaluator
-from CameraVision import *
+from cameravision import *
 import classes as cl
 from peas.networks.rnn import NeuralNetwork
 
