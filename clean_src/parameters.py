@@ -30,6 +30,7 @@ re_weight = 0.8                     # part or reevaluation fitness that stays th
 
 MAX_MOTOR_SPEED = 300
 max_fitness = eval_time * 6
+real_max_speed = real_speed_percentage * MAX_MOTOR_SPEED
 
 # Am I using hidden layer?
 hidden_layer = 1
