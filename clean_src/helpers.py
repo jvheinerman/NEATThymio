@@ -1,6 +1,6 @@
 import sys, os, errno
+from parameters import MAX_MOTOR_SPEED
 
-MAX_MOTOR_SPEED = 300
 RAND_MAX = sys.maxint
 LEFT = 0
 RIGHT = 1

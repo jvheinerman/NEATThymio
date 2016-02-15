@@ -10,7 +10,6 @@ import dbus.mainloop.glib
 import logging
 import pickle
 import parameters as pr
-import classes
 from helpers import *
 from task_evaluator import TaskEvaluator
 from peas.networks.rnn import NeuralNetwork
@@ -82,7 +81,7 @@ class ObstacleAvoidance(TaskEvaluator):
         # Calculate normalized distance to the nearest object
         sensorpenalty = 0
         for i, sensor in enumerate(observation[:-1]):
-            distance = sensor / float(classes.SENSOR_MAX[i])
+            distance = sensor / float(pr.SENSOR_MAX[i])
             if sensorpenalty < distance:
                 sensorpenalty = distance
         if sensorpenalty > 1:

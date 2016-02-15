@@ -6,7 +6,7 @@ import time
 import os
 import threading
 
-import classes as cl
+from parameters import TIME_STEP
 from CommandsListener import *
 
 CURRENT_FILE_PATH = os.path.abspath(os.path.dirname(__file__))
@@ -182,7 +182,7 @@ class ThymioController(object):
                 self.__dbusSetMotorspeed()  # IF COMMENTED: wheels don't move
                 # Make sure that Thymio moved for 1 timestep
                 time.sleep(
-                    cl.TIME_STEP)  # TODO: more precise -> thymio should notify controller when it moved for 50 ms
+                    TIME_STEP)  # TODO: more precise -> thymio should notify controller when it moved for 50 ms
                 self.__wMotorspeedReq = False
             elif self.__rMotorspeedReq:
                 self.__dbusGetMotorSpeed()
