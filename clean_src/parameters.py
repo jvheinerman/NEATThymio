@@ -33,6 +33,7 @@ max_fitness = eval_time * 6
 real_max_speed = real_speed_percentage * MAX_MOTOR_SPEED
 
 MIN_FPS = 0.2                       # Minimum frame rate for camera updates
+MIN_GOAL_DIST = 180
 
 # Am I using hidden layer?
 hidden_layer = 1

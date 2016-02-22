@@ -88,7 +88,8 @@ class ForagingTask(TaskEvaluator):
     def getEnergyDelta(self):
         global img_client
         if img_client and not self.camera.binary_channels is None:
-            send_image(img_client, self.camera.binary_channels, self.energy)
+            send_image(img_client, self.camera.binary_channels, self.energy,
+                       self.presence[0], self.presence[2])
 
         speedpenalty = 0
         if self.motorspeed['left'] < 0 and self.motorspeed['right'] < 0:
@@ -112,7 +113,7 @@ class ForagingTask(TaskEvaluator):
         if self.presence[0] == 0:
             energy_delta = speedpenalty + GOAL_BONUS_SCALE * (self.prev_presence[2] - self.presence[2])
 
-        if self.camera.goal_reached() and self.presence[2] < 40:
+        if self.camera.goal_reached(self.presence[0], self.presence[2], MIN_GOAL_DIST):
             print '===== Goal reached!'
             stopThymio(self.thymioController)
 
@@ -227,9 +228,9 @@ def write_header(client, boundary='thymio'):
             "\r\n" +
             "--" + boundary + "\r\n")
 
-def send_image(client, binary_channels, energy, boundary='thymio'):
+def send_image(client, binary_channels, energy, box_dist, goal_dist, boundary='thymio'):
     red = np.zeros(binary_channels[0].shape, np.uint8)
-    cv2.putText(red, 'E: {0:.2f}'.format(energy), (5, 20), cv2.FONT_HERSHEY_PLAIN, 1, (255, ), 1, 255)
+    cv2.putText(red, 'E: {0:.2f} P: {1:.0f} G: {2:.0f}'.format(energy, box_dist, goal_dist), (5, 20), cv2.FONT_HERSHEY_PLAIN, 1, (255, ), 1, 255)
     image = np.dstack(binary_channels + [red])
     _, encoded = cv2.imencode('.png', image)
     image_bytes = bytearray(np.asarray(encoded))

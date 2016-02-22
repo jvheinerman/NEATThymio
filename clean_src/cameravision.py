@@ -12,7 +12,7 @@ import cv2
 
 import picamera
 
-from parameters import MIN_FPS
+from parameters import MIN_FPS, MIN_GOAL_DIST
 
 # Recognize color using the camera
 class CameraVision(threading.Thread):
@@ -292,9 +292,8 @@ class CameraVisionVectors(CameraVision):
         # print('Found distance: ' + str(dist) + ' and angle: ' + str(angle))
         return dist, angle
 
-    def goal_reached(self):
-        # top_img = self.goal_binary[:self.goal_binary.shape[0] / 2, :]
-        return np.sum(self.goal_binary) > 50000 and self.presence[0] == 0
+    def goal_reached(self, box_dist, goal_dist, MIN_GOAL_DIST=100):
+        return goal_dist <= MIN_GOAL_DIST and box_dist == 0
 
     def run(self):
         try:
