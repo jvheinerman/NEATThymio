@@ -104,11 +104,11 @@ class ForagingTask(TaskEvaluator):
         elif self.presence[0] != 0 and self.prev_presence[0] == 0:
             self.getLogger().info(str(self.individuals_evaluated) + ' > Lost puck')
 
-        energy_delta = speedpenalty + PUCK_BONUS_SCALE * (self.prev_presence[0] - self.presence[0]) * EXPECTED_FPS * (time.time() - self.step_time)
+        energy_delta = speedpenalty + PUCK_BONUS_SCALE * (self.prev_presence[0] - self.presence[0])
 
         # print self.presence
         if self.presence[0] == 0:
-            energy_delta = speedpenalty + GOAL_BONUS_SCALE * (self.prev_presence[2] - self.presence[2]) * EXPECTED_FPS * (time.time() - self.step_time)
+            energy_delta = speedpenalty + GOAL_BONUS_SCALE * (self.prev_presence[2] - self.presence[2])
 
         if self.camera.goal_reached() and self.presence[2] < 40:
             print '===== Goal reached!'
@@ -119,14 +119,14 @@ class ForagingTask(TaskEvaluator):
                 time.sleep(.3)
                 self.thymioController.SendEventName('PlayFreq', [0, -1], reply_handler=dbusReply, error_handler=dbusError)
                 time.sleep(.7)
-            
+
             time.sleep(1)
             energy_delta = GOAL_REACHED_BONUS
 
             self.getLogger().info(str(self.individuals_evaluated) + ' > Goal reached')
 
         # if energy_delta: print('Energy delta %d' % energy_delta)
-        
+
         self.step_time = time.time()
 
         return energy_delta
@@ -151,13 +151,13 @@ class ForagingTask(TaskEvaluator):
             if task.energy <= 0 or task.evaluations_taken >= MAX_STEPS:
                 stopThymio(thymioController)
                 task.loop.quit()
-                
+
                 if task.energy <= 0:
                     print 'Energy exhausted'
                 else:
                     print 'Time exhausted'
-                
-                return False 
+
+                return False
             ret_value =  task._step(evaluee, lambda (energy): update_energy(task, energy))
             task.evaluations_taken += 1
             task.energy -= ENERGY_DECAY
@@ -165,7 +165,7 @@ class ForagingTask(TaskEvaluator):
             return ret_value
         gobject.timeout_add(int(self.timeStep * 1000), lambda: main_lambda(self))
         # glib.idle_add(lambda: main_lambda(self))
-        
+
         print 'Starting camera...'
         try:
             self.camera = CameraVisionVectors(False, self.logger)
@@ -173,7 +173,7 @@ class ForagingTask(TaskEvaluator):
             # time.sleep(2)
         except RuntimeError, e:
             print 'Camera already started!'
-        
+
         print 'Starting loop...'
         self.loop.run()
 
@@ -205,7 +205,7 @@ def release_resources(thymio):
     global ctrl_client
     ctrl_serversocket.close()
     if ctrl_client: ctrl_client.close()
-    
+
     global img_serversocket
     global img_client
     img_serversocket.close()
@@ -241,9 +241,9 @@ if __name__ == '__main__':
     from peas.methods.neat import NEATPopulation, NEATGenotype
     genotype = lambda: NEATGenotype(
         inputs=5,
-        outputs=2, 
-        types=[ACTIVATION_FUNC], 
-        prob_add_node=0.1, 
+        outputs=2,
+        types=[ACTIVATION_FUNC],
+        prob_add_node=0.1,
         weight_range=(-3, 3),
         stdev_mutate_weight=.25,
         stdev_mutate_bias=.25,

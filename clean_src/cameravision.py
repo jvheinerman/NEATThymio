@@ -12,6 +12,7 @@ import cv2
 
 import picamera
 
+from parameters import MIN_FPS
 
 # Recognize color using the camera
 class CameraVision(threading.Thread):
@@ -141,6 +142,8 @@ class CameraVision(threading.Thread):
                 # capture into stream
                 stream = io.BytesIO()
                 for foo in camera.capture_continuous(stream, 'jpeg'):
+                    last_time = time.time()
+
                     data = np.fromstring(stream.getvalue(), dtype=np.uint8)
                     # "Decode" the image from the array, preserving colour
                     image = cv2.imdecode(data, 1)
@@ -211,6 +214,8 @@ class CameraVision(threading.Thread):
                     if self._stopped():
                         self.__simLogger.debug("Stopping camera thread")
                         break
+                    print "time left:", (time.time() - last_time)
+                    time.sleep(MIN_FPS - (time.time() - last_time))
             cv2.destroyAllWindows()
         except Exception as e:
             self.__simLogger.critical("Camera exception: " + str(e) + str(
@@ -275,13 +280,13 @@ class CameraVisionVectors(CameraVision):
 
         return cv2.inRange(self.hsv, lower_color, upper_color)
 
-    def img_to_vector(self, binary, check_puck=False):        
+    def img_to_vector(self, binary, check_puck=False):
         # if not check_puck:
         #    pickle.dump(binary, open('binary.p', 'wb'))
         #    import sys
         #    print 'Exiting...'
         #    sys.exit(0)
-        
+
         dist, angle = self.find_shortest(binary, check_puck=check_puck)
 
         # print('Found distance: ' + str(dist) + ' and angle: ' + str(angle))
@@ -323,7 +328,7 @@ class CameraVisionVectors(CameraVision):
 
                     self.puck_binary = self.get_binary_img(check_puck=True)
                     self.presence = self.img_to_vector(self.puck_binary, check_puck=True)
-                    
+
                     self.goal_binary = self.get_binary_img()
                     self.presenceGoal = self.img_to_vector(self.goal_binary)
 
