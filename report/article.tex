@@ -1,0 +1,91 @@
+\author{Andrea Jemmett, Chiel Kooijman}
+\title{article}
+\documentclass{article}
+\usepackage{graphicx,amsmath}
+\begin{document}
+	\maketitle
+	\section{Introduction} % {{{
+	\label{sec:Introduction}
+
+	% section Introduction }}}
+
+	\section{Related Work} % {{{
+	\label{sec:Related Work}
+	% section Related Work }}}
+	\cite{heinermanevolution}
+	\cite{silva2012odneat}
+	\cite{stanley2002evolving, stanley2009hypercube, stanley2006real}
+
+	\section{System Description} % {{{
+	\label{sec:method}
+	\subsection{Obstacle Avoidance} % {{{
+	\label{sub:Obstacle Avoidance}
+	blabla.
+	% subsection Obstacle Avoidance }}}
+
+	\subsection{Foraging} % {{{
+	\label{sub:Foraging}
+	In the foraging task the goal is to bring pucks to the goal area using the
+	camera as often as possible within its evaluation time.
+
+	\paragraph{Inputs} % {{{
+	\label{par:Inputs}
+	Inputs consist of the distance and angle to the closest pixel that shows
+	the puck and the goal from the bottom center of the image, and a binary
+	flag representing wether the robot has the puck:
+	(more explaination)
+
+	recurrent
+	% paragraph Inputs }}}
+
+	\begin{itemize}
+		\item inputs (dist, angle) for (puck, goal) and has\_puck
+		\item energy
+		\item fitness
+		\item foraging parameters: MIN\_GOAL\_DIST, DECAYS, MAX\_STEPS
+	\end{itemize}
+	% xXX image: picture of robot + lego contraption
+	% subsection Foraging }}}
+
+	\subsection{Robot} % {{{
+	\label{sub:Robot}
+	The Thymio II robot includes 7 Infra-Red (IR) proximity sensors able detect
+	to obstacles of which are 5 in the front and two in the back (values
+	between 0 and around 4500, where a higher value corresponds to a near
+	obstacle).
+	In the foraging task the robot is outfitted with a Raspberry Pi Camera
+	Module, which streams 320x240 pixel images, and a piece of velcro with
+	which it can grab the pucks. The camera is placed so that it can still see
+	the puck when it has stuck to it while seeing as far forward as possible.
+	The robot can move through two differential wheels, meaning that two
+	different speeds (range between -300 and 300 for obstacle avoidance and
+	-150 to 250 for foraging) can be set for each wheel. For the purpose of our
+	research, we extend the standard setup with a more powerful logic board,
+	wireless communication, and a high capacity battery. We use a Raspberry Pi
+	B+ (credit card-sized single-board computer developed in the UK by the
+	Raspberry Pi Foundation) that interacts with the Thymio sensors and
+	actuators. A WiFi dongle (Edimax 150Mbps Wireless 802.11b/g/n nano USB WiFi
+	Adapter model EW-7811Un) attached to the Raspberry Pi ensures communication
+	between the robots. The power is given by a Verbatim Dual USB 12000 mAh
+	battery that allows for a total experimental time of 10 hours.
+	% FIXME maybe not copy this verbatim?
+	% subsection Robot }}}
+
+	\subsection{Environment} % {{{
+	\label{sub:Environment}
+	The robots operate in an arena of two meters by two and a half meters with
+	inner and outer walls that act as obstacles to avoid.
+	In the foraging task one of the corners of the arena is blue with white
+	patches to counteract white-balance issues, and there are five green pucks
+	with velcro sides placed in the arena.
+	% subsection Environment }}}
+
+	% section System Description }}}
+	\section{Experimental Setup} % {{{
+	\label{sec:Experimental Setup}
+
+	% section Experimental Setup }}}
+
+\bibliographystyle{abbrv}
+\bibliography{references}
+\end{document}
