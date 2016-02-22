@@ -67,7 +67,9 @@ class ForagingTask(TaskEvaluator):
             self.prev_presence = self.presence
             self.presence = tuple(presence_box) + tuple(presence_goal)
 
-            inputs = np.hstack(([x if not x == -np.inf else -10000 for x in self.presence], 1))
+            has_box = 1 if presence_box[0] == 0 else 0
+
+            inputs = np.hstack(([x if not x == -np.inf else -10000 for x in self.presence], has_box, 1))
             inputs[::2] = inputs[::2] / self.camera.MAX_DISTANCE
 
             out = NeuralNetwork(evaluee).feed(inputs)
@@ -240,7 +242,7 @@ def send_image(client, binary_channels, energy, boundary='thymio'):
 if __name__ == '__main__':
     from peas.methods.neat import NEATPopulation, NEATGenotype
     genotype = lambda: NEATGenotype(
-        inputs=5,
+        inputs=6,
         outputs=2,
         types=[ACTIVATION_FUNC],
         prob_add_node=0.1,
