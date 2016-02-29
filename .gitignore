@@ -70,3 +70,4 @@ article.blg
 article.dvi
 article.pdf
 article.ps
+*.tex.swp
