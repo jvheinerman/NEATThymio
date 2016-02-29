@@ -6,29 +6,35 @@
 
 \begin{document}
 	\maketitle
+	\begin{abstract}
+		We made robots do cool things.
+		% FIXME: Make the abstract less abstract.
+	\end{abstract}
+
 	\section{Introduction} % {{{
 	\label{sec:Introduction}
 	In the field of Evolutionary Robotics (ER), several papers have been
 	published over the last decades, but most were either concerned
-	with evolving a robot controller in a virtual environment, or more recently
-	about evolving neural networks for behaviour on real robots, but only
-	succesfully for limited tasks.
-	In this paper we explore how more complex behaviour can be evolved on real
-	robots using (Hyper?)NEAT and using the right processing of input data. As
-	far as the authors are aware this is the first time NEAT has been used to
-	evolve behaviour on physical robots.
+	with evolving a robot controller in a virtual environment
+	\cite{silva2015case, simoes1999evolutionary, sims1994evolving}, or more
+	recently about evolving neural networks for behaviour on real robots, but
+	only succesfully for limited tasks \cite{heinermanevolution,
+	watson1999embodied}. In this paper we explore how more complex behaviour
+	can be evolved on real robots using (Hyper?)NEAT \cite{stanley2002evolving}
+	and using the right processing of input data. As far as the authors are
+	aware this is the first time NEAT has been used to evolve behaviour on
+	physical robots.
 	% TODO: Something about energy and taking inspiration from life and RL?
 	% TODO: and we show how we do impossibly amazing things and are much better
 	% at everything than everyone else ever.
-	In the next section we cover previous work on ER. In section
+	In the next section we cover previous work on ER and NEAT. In section
 	\ref{sec:method} we give a precise description on the hardware used, we
 	explain the Obstacle Avoidance and Foraging tasks, including the reward
-	model, the envorinment in which the robots were evaluated and the algorithm
-	and settings used for the experiments.
-	In section \ref{sec:setup} we describe the exact parameters used to run the
-	experiments, and section \ref{sec:results} we cover the results.
-	Conclusions are drawn and further research suggested in section
-	\ref{sec:conclusion}.
+	model, the envorinment in which the robots were evaluated, and the
+	algorithm and settings used for the experiments.
+	In sections \ref{sec:setup} and \ref{sec:results} we cover the exact
+	parameters used to run the experiments and their results respectively.
+	Conclusions are drawn and further research suggested in the last section.
 	% section Introduction }}}
 
 	\section{Related Work} % {{{
@@ -86,9 +92,9 @@
 	\paragraph{Inputs} % {{{
 	\label{par:Inputs}
 	Inputs consist of the distance and angle to the closest pixel that shows
-	the puck and the goal from the bottom center of the image, and a binary
-	flag representing wether the robot has the puck:
-	(more explaination)
+	the puck and the goal from the bottom centre of the image, and a binary
+	flag representing whether the robot has the puck:
+	(more explanation)
 
 	recurrent
 	% paragraph Inputs }}}
@@ -103,6 +109,7 @@
 	% subsection Foraging }}}
 
 	% section System Description }}}
+
 	\section{Experimental Setup} % {{{
 	\label{sec:setup}
 
@@ -115,8 +122,21 @@
 
 	\section{Conclusion and Further Work} % {{{
 	\label{sec:conclusion}
-	
+	Using energy helps limit evaluation time which makes evolving behaviour on
+	physical robots more viable.
+	% TODO: use experiments to show that this is actually true
+	Calculating something akin to distance and angle is possible in real time.
+	Limiting the number of input nodes makes learning faster. % TODO does it?
+
+	In the future:\\
+	\begin{itemize}
+		\item Use Reinforcement Learning (DQN).\\
+		\item Use more robots with a distributed system (e.g. odNEAT).\\
+		\item Use Distributed Reinforcement Learning (i.e. sharing network
+			weights).
+	\end{itemize}
 	% section conclusion }}}
+
 \bibliographystyle{abbrv}
 \bibliography{references}
 \end{document}
