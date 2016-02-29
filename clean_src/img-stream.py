@@ -5,7 +5,12 @@ if not os.path.isdir("srv_resources"):
     os.system("install_server.py")
 
 HOST_NAME = 'localhost' # !!!REMEMBER TO CHANGE THIS!!!
-PORT_NUMBER = 80 # Maybe set this to 9000.
+if os.getuid() == 0:
+    PORT_NUMBER = 80
+    print "hosting server on http://localhost"
+else:
+    PORT_NUMBER = 8080
+    print "hosting server on http://localhost:8080"
 css = open("srv_resources/bootstrap.min.css", "r").read()
 js = open("srv_resources/bootstrap.min.js", "r").read()
 bootstrap = '<style>'+css+'</style> <script type="text/javascript">'+js+'</script>'
@@ -38,4 +43,4 @@ if __name__ == '__main__':
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
-        pass
+        print
