@@ -1,20 +1,39 @@
 \author{Andrea Jemmett, Chiel Kooijman}
-\title{article}
+\title{Evolving Behaviour for Thymio Robots using NEAT}
+% XXX: Include interest-invoking words as real-time, online, etc
 \documentclass{article}
 \usepackage{graphicx,amsmath}
+
 \begin{document}
 	\maketitle
 	\section{Introduction} % {{{
 	\label{sec:Introduction}
-
+	In the field of Evolutionary Robotics (ER), several papers have been
+	published over the last decades, but most were either concerned
+	with evolving a robot controller in a virtual environment, or more recently
+	about evolving neural networks for behaviour on real robots, but only
+	succesfully for limited tasks.
+	In this paper we explore how more complex behaviour can be evolved on real
+	robots using (Hyper?)NEAT and using the right processing of input data.
+	% TODO: and we show how we do impossibly amazing things and are much better
+	% at everything than everyone else ever.
+	In the next section we cover previous work on ER. In section
+	\ref{sec:method} we give a precise description on the hardware used, we
+	explain the Obstacle Avoidance and Foraging tasks, including the reward
+	model, the envorinment in which the robots were evaluated and the algorithm
+	and settings used for the experiments.
+	In section \ref{sec:setup} we describe the exact parameters used to run the
+	experiments, and section \ref{sec:results} we cover the results.
+	Conclusions are drawn and further research suggested in section
+	\ref{sec:conclusion}.
 	% section Introduction }}}
 
 	\section{Related Work} % {{{
 	\label{sec:Related Work}
-	% section Related Work }}}
 	\cite{heinermanevolution}
 	\cite{silva2012odneat}
 	\cite{stanley2002evolving, stanley2009hypercube, stanley2006real}
+	% section Related Work }}}
 
 	\section{System Description} % {{{
 	\label{sec:method}
@@ -82,10 +101,19 @@
 
 	% section System Description }}}
 	\section{Experimental Setup} % {{{
-	\label{sec:Experimental Setup}
+	\label{sec:setup}
 
 	% section Experimental Setup }}}
 
+	\section{Experimental Results} % {{{
+	\label{sec:results}
+	
+	% section results }}}
+
+	\section{Conclusion and Further Work} % {{{
+	\label{sec:conclusion}
+	
+	% section conclusion }}}
 \bibliographystyle{abbrv}
 \bibliography{references}
 \end{document}
