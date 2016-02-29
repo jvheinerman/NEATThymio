@@ -81,8 +81,8 @@
 
 	\subsection{Obstacle Avoidance} % {{{
 	\label{sub:Obstacle Avoidance}
-	In this section we present the Obstacle Acoidance task. In this task the
-	robotsi are placed in the environment and have to learn how to avoid its
+	In this section we present the Obstacle Avoidance task. In this task the
+	robots are placed in the environment and have to learn how to avoid its
 	outer walls. Each robot is evaluated for a fixed period of time $T$ and its
 	performance is measured using a fitness function.
 
@@ -93,10 +93,10 @@
 	and the central one) and the two sensors from the back. The input vector 
 	is then augmented with a bias value of $1$.
 	% parapgraph obstacle_inputs }}}
-	
+
 	\paragraph{Fitness function} % {{{
 	\label{par:obstacle_fitness}
-	We use the following performance measure, as in \ref{heinermanevolution}:
+	We use the following performance measure, as in \cite{heinermanevolution}:
 	$$f = \sum_{t=0}^{T}{s_{trans} (1 - s_{rot}) (1 - v_{sens})}$$
 	where:
 	\begin{itemize}
@@ -111,10 +111,11 @@
 	The aim of this fitness function is to have a robot capable of going as much
 	as possible in a straight path (hence the use of $s_{rot}$), with the
 	highest possible speed (hence $s_{trans}$) and without going into walls. The
-	component $v_{sens}$ is necessary: suppose that the robot is percorring a
-	straight path at maximum velocity against a wall; without the $v_{sens}$ component the
-	robot's performance in this case would be maximal. By using $v_{sens}$ we
-	prevent this situation and the fitness score will be low.
+	component $v_{sens}$ is necessary: suppose that the robot is travelling
+	along a straight path at maximum velocity against a wall; without the
+	$v_{sens}$ component the robot's performance in this case would be maximal.
+	By using $v_{sens}$ we prevent this situation and the fitness score will be
+	low.
 	% paragraph obstacle_fitness }}}
 	% subsection Obstacle Avoidance }}}
 
@@ -125,18 +126,18 @@
 
 	\paragraph{Inputs} % {{{
 	\label{par:foraging_inputs}
-	Inputs consist of the distance and angle from the bottom center of the image
+	Inputs consist of the distance and angle from the bottom centre of the image
 	to the closest pixel that shows the puck and the goal, and a binary flag
-	representing wether the robot has the puck. We first apply a Gaussian filter
+	representing whether the robot has the puck. We first apply a Gaussian filter
 	to the camera image, then we convert it from \textit{BGR} to \textit{HSV}
-	color space and we apply a thresholding operator to get two binary images:
+	colour space and we apply a thresholding operator to get two binary images:
 	one for the pucks and the other for the goal. The puck distance and angle is
-	then the distance from the bottom center of the image to the closest point
+	then the distance from the bottom centre of the image to the closest point
 	in the binary image. In a similar manner we compute distance and angle of
 	the goal. For performance reasons those values have been precomputed and
 	stored in two matrices, one for distances and one for angles.
 	The evolved Neural Network is recurrent, meaning that a node is not limited
-	to be linked to a node in the next layer (as in feedforward NN) but can be
+	to be linked to a node in the next layer (as in feed-forward NN) but can be
 	linked also to a node in the previous or same layer.
 	% paragraph foraging_inputs }}}
 
