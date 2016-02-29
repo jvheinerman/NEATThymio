@@ -143,7 +143,19 @@
 
 	\paragraph{Fitness function} %{{{
 	\label{par:foraging_fitness}
-	Fitness function for foraging task
+	Each robot has a virtual energy level (which it is not aware of). At the
+	beginning of the evaluation, the energy level is set to $INITIAL\_ENERGY$.
+	Then, at each successive time step and energy delta is computed and
+	subtracted from the energy level. The energy gets decremented by a quantity
+	$ENERGY\_DECAY$ every time step and the following formula holds:
+	
+	$$
+	f=
+	\begin{cases}
+		something & ifrobothaspuck \\
+		something\_else & {otherwise}
+	\end{cases}
+	$$
 	% paragraph foraging_fitness }}}
 
 	\begin{itemize}
