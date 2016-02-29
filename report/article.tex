@@ -40,35 +40,6 @@
 
 	\section{System Description} % {{{
 	\label{sec:method}
-	\subsection{Obstacle Avoidance} % {{{
-	\label{sub:Obstacle Avoidance}
-	blabla.
-	% subsection Obstacle Avoidance }}}
-
-	\subsection{Foraging} % {{{
-	\label{sub:Foraging}
-	In the foraging task the goal is to bring pucks to the goal area using the
-	camera as often as possible within its evaluation time.
-
-	\paragraph{Inputs} % {{{
-	\label{par:Inputs}
-	Inputs consist of the distance and angle to the closest pixel that shows
-	the puck and the goal from the bottom center of the image, and a binary
-	flag representing wether the robot has the puck:
-	(more explaination)
-
-	recurrent
-	% paragraph Inputs }}}
-
-	\begin{itemize}
-		\item inputs (dist, angle) for (puck, goal) and has\_puck
-		\item energy
-		\item fitness
-		\item foraging parameters: MIN\_GOAL\_DIST, DECAYS, MAX\_STEPS
-	\end{itemize}
-	% xXX image: picture of robot + lego contraption
-	% subsection Foraging }}}
-
 	\subsection{Robot} % {{{
 	\label{sub:Robot}
 	The Thymio II robot includes 7 Infra-Red (IR) proximity sensors able detect
@@ -101,6 +72,35 @@
 	patches to counteract white-balance issues, and there are five green pucks
 	with velcro sides placed in the arena.
 	% subsection Environment }}}
+
+	\subsection{Obstacle Avoidance} % {{{
+	\label{sub:Obstacle Avoidance}
+	blabla.
+	% subsection Obstacle Avoidance }}}
+
+	\subsection{Foraging} % {{{
+	\label{sub:Foraging}
+	In the foraging task the goal is to bring pucks to the goal area using the
+	camera as often as possible within its evaluation time.
+
+	\paragraph{Inputs} % {{{
+	\label{par:Inputs}
+	Inputs consist of the distance and angle to the closest pixel that shows
+	the puck and the goal from the bottom center of the image, and a binary
+	flag representing wether the robot has the puck:
+	(more explaination)
+
+	recurrent
+	% paragraph Inputs }}}
+
+	\begin{itemize}
+		\item inputs (dist, angle) for (puck, goal) and has\_puck
+		\item energy
+		\item fitness
+		\item foraging parameters: MIN\_GOAL\_DIST, DECAYS, MAX\_STEPS
+	\end{itemize}
+	% xXX image: picture of robot + lego contraption
+	% subsection Foraging }}}
 
 	% section System Description }}}
 	\section{Experimental Setup} % {{{
