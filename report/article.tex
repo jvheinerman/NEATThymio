@@ -76,12 +76,46 @@
 	inner and outer walls that act as obstacles to avoid.
 	In the foraging task one of the corners of the arena is blue with white
 	patches to counteract white-balance issues, and there are five green pucks
-	with velcro sides placed in the arena.
+	with hook and loop fasteners sides placed in the arena.
 	% subsection Environment }}}
 
 	\subsection{Obstacle Avoidance} % {{{
 	\label{sub:Obstacle Avoidance}
-	blabla.
+	In this section we present the Obstacle Acoidance task. In this task the
+	robotsi are placed in the environment and have to learn how to avoid its
+	outer walls. Each robot is evaluated for a fixed period of time $T$ and its
+	performance is measured using a fitness function.
+
+	\paragraph{Inputs} % {{{
+	\label{par:obstacle_inputs}
+	The input vector to the Neural Network controller is coposed by some of the
+	proximity IR sensors. We use the three sensor in the front (the outermost 
+	and the central one) and the two sensors from the back. The input vector 
+	is then augmented with a bias value of $1$.
+	% parapgraph obstacle_inputs }}}
+	
+	\paragraph{Fitness function} % {{{
+	\label{par:obstacle_fitness}
+	We use the following performance measure, as in \ref{heinermanevolution}:
+	$$f = \sum_{t=0}^{T}{s_{trans} (1 - s_{rot}) (1 - v_{sens})}$$
+	where:
+	\begin{itemize}
+		\item $s_{trans}$ is the translational speed (non normalized)
+			computed as the sum of the right motor speed and the left one;
+		\item $s_{rot}$ is the rotational speed, computed as the absolute
+			difference between the speed values of the two motors and normalized
+			in the range $[0, 1]$;
+		\item $v_{sens}$ is the value of the proximity sensor closest to an
+			obstacle normalized between 0 and 1.
+	\end{itemize}
+	The aim of this fitness function is to have a robot capable of going as much
+	as possible in a straight path (hence the use of $s_{rot}$), with the
+	highest possible speed (hence $s_{trans}$) and without going into walls. The
+	component $v_{sens}$ is necessary: suppose that the robot is percorring a
+	straight path at maximum velocity against a wall; without the $v_{sens}$ component the
+	robot's performance in this case would be maximal. By using $v_{sens}$ we
+	prevent this situation and the fitness score will be low.
+	% paragraph obstacle_fitness }}}
 	% subsection Obstacle Avoidance }}}
 
 	\subsection{Foraging} % {{{
@@ -90,14 +124,26 @@
 	camera as often as possible within its evaluation time.
 
 	\paragraph{Inputs} % {{{
-	\label{par:Inputs}
-	Inputs consist of the distance and angle to the closest pixel that shows
-	the puck and the goal from the bottom centre of the image, and a binary
-	flag representing whether the robot has the puck:
-	(more explanation)
+	\label{par:foraging_inputs}
+	Inputs consist of the distance and angle from the bottom center of the image
+	to the closest pixel that shows the puck and the goal, and a binary flag
+	representing wether the robot has the puck. We first apply a Gaussian filter
+	to the camera image, then we convert it from \textit{BGR} to \textit{HSV}
+	color space and we apply a thresholding operator to get two binary images:
+	one for the pucks and the other for the goal. The puck distance and angle is
+	then the distance from the bottom center of the image to the closest point
+	in the binary image. In a similar manner we compute distance and angle of
+	the goal. For performance reasons those values have been precomputed and
+	stored in two matrices, one for distances and one for angles.
+	The evolved Neural Network is recurrent, meaning that a node is not limited
+	to be linked to a node in the next layer (as in feedforward NN) but can be
+	linked also to a node in the previous or same layer.
+	% paragraph foraging_inputs }}}
 
-	recurrent
-	% paragraph Inputs }}}
+	\paragraph{Fitness function} %{{{
+	\label{par:foraging_fitness}
+	Fitness function for foraging task
+	% paragraph foraging_fitness }}}
 
 	\begin{itemize}
 		\item inputs (dist, angle) for (puck, goal) and has\_puck
