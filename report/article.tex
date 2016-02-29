@@ -174,13 +174,19 @@
 	Calculating something akin to distance and angle is possible in real time.
 	Limiting the number of input nodes makes learning faster. % TODO does it?
 
-	In the future:\\
-	\begin{itemize}
-		\item Use Reinforcement Learning (DQN).\\
-		\item Use more robots with a distributed system (e.g. odNEAT).\\
-		\item Use Distributed Reinforcement Learning (i.e. sharing network
-			weights).
-	\end{itemize}
+	Due to the time it took to process the camera input, we had to decrease the
+	locomotion speed of the robot so that it had enough time to stop turning
+	once it saw the goal or the puck. With a faster processor or dedicated GPU
+	image processing time could be decreased, thus allowing us to increase the
+	maximum motor speeds, allowing us to evaluate the individuals more quickly.
+	Furthermore using more robots in a distributed way such as odNEAT
+	\cite{silva2012odneat} would decrease the time needed to evolve robots able
+	to evolve fitter robots faster.
+
+	Alternatively, Reinforcement Learning (RL) methods such as DQN \cite{} may
+	be more suitable for this type of task, as they allow the behaviour to be
+	adapted at every time-step in a way that is more likely to result in better
+	fitness than random mutations.
 	% section conclusion }}}
 
 \bibliographystyle{abbrv}
