@@ -1,6 +1,6 @@
 import sys, os, errno
 
-MAX_MOTOR_SPEED = 300
+MAX_MOTOR_SPEED = 150
 RAND_MAX = sys.maxint
 LEFT = 0
 RIGHT = 1
@@ -40,6 +40,9 @@ def writeMotorSpeed(controller, motorspeed):
     controller.SetVariable("thymio-II", "motor.left.target", [motorspeed['left'] * MAX_MOTOR_SPEED])
     controller.SetVariable("thymio-II", "motor.right.target", [motorspeed['right'] * MAX_MOTOR_SPEED])
 
+
+def getProxReadings(controller, ok_callback, nok_callback):
+    controller.GetVariable("thymio-II", "prox.horizontal", reply_handler=ok_callback, error_handler=nok_callback)
 
 def getProxReadings(controller, ok_callback, nok_callback):
     controller.GetVariable("thymio-II", "prox.horizontal", reply_handler=ok_callback, error_handler=nok_callback)

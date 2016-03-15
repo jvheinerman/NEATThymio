@@ -23,9 +23,9 @@ global CAMERA_MAX           # max camera value
 global SOUND                # sound emitted at goal
 
 NB_DIST_SENS = 5  # 7
-NB_CAM_SENS = 7  # 4 for pack color and 3 for target color
+NB_CAM_SENS = 0  # 4 for pack color and 3 for target color
 
-HIDDEN_NEURONS = 4
+HIDDEN_NEURONS = 0
 
 NN_WEIGHTS = (NB_DIST_SENS + NB_CAM_SENS + 1) * HIDDEN_NEURONS  # (5 + 4 + 1) * 4 = 40
 NN_WEIGHTS_HIDDEN = HIDDEN_NEURONS * 2 + 2  # 4 * 2 + 2 = 10
@@ -34,7 +34,7 @@ TOTAL_WEIGHTS = NN_WEIGHTS + NN_WEIGHTS_HIDDEN  # 40 + 10 = 50
 NN_WEIGHTS_NO_HIDDEN = (NB_DIST_SENS + NB_CAM_SENS + 1) * 2  # (5 + 4 + 1) * 2 = 20
 
 MAXSPEED = 500
-SENSOR_MAX = [3500, 2500, 3500, 4000, 4000]  # 4500  # XXX: found sensor with max value of 5100
+SENSOR_MAX = [3000, 3000, 3000, 3000, 3000]  # 4500  # XXX: found sensor with max value of 5100
 TIME_STEP = 0.05  # = 50 milliseconds. IMPORTANT: keep updated with TIME_STEP constant in asebaCommands.aesl
 CAMERA_MAX = [7000, 7000, 9000, 11000, 20000, 20000, 20000, 20000]  # left, right, center, bottom (red and black)
 

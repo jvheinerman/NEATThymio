@@ -1,5 +1,12 @@
 # -*- coding: utf-8 -*-
 
+from helpers import *
+from parameters import *
+from neat_task import NEATTask
+from CameraVision import *
+import classes as cl
+from peas.networks.rnn import NeuralNetwork
+
 import numpy as np
 import os
 import time
@@ -17,7 +24,7 @@ from peas.networks.rnn import NeuralNetwork
 EVALUATIONS = 1000
 TIME_STEP = 0.005
 ACTIVATION_FUNC = 'tanh'
-POPSIZE = 1
+POPSIZE = 5
 GENERATIONS = 100
 SOLVED_AT = EVALUATIONS * 2
 EXPERIMENT_NAME = 'NEAT_obstacle_avoidance'

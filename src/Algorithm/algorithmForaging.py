@@ -719,12 +719,12 @@ class Simulation(threading.Thread):
 
         print("single ff -> " + str(fitness[0]) + " " + str(fitness[1]) + " " + str(fitness[2]) + " " + str(fitness[3]) + " " + str(fitness[4]))
 
-        total_fitness = sum(fitness[0:5])
+        total_fitness = fitness[0] #sum(fitness[0:5])
 
         print(str(total_fitness) + "\n ")
 
         self.__simLogger.info("Fitness ->" + str(total_fitness))
-        return total_fitness, fitness[5]
+        return total_fitness, fitness[0]
 
 
     # fitness function
@@ -753,6 +753,7 @@ class Simulation(threading.Thread):
         psValues = self.__thymioController.getPSValues()
 
         psValues = [psValues[0], psValues[2], psValues[4], psValues[5], psValues[6]]
+        #self.__simLogger.info("PS -> " + str(psValues[0]) + " " + str(psValues[1]) + " " + str(psValues[2]) + " " + str(psValues[3]) + " " + str(psValues[4]))
 
         # return presence value from camera
         presence_box = self.__threadCamera.readPuckPresence()
@@ -804,12 +805,12 @@ class Simulation(threading.Thread):
                 normalizedSensor = min((psValues[i] - (cl.SENSOR_MAX[i] / 2)) / (cl.SENSOR_MAX[i] / 2), 1.0)
                 left += totalPresence[i] * evaluee.memome[i]
                 right += totalPresence[i] * evaluee.memome[i + (cl.NN_WEIGHTS_NO_HIDDEN / 2)]
-            for i in range(0, cl.NB_CAM_SENS):  # Calculate weight only for camera sensor
+                #for i in range(0, cl.NB_CAM_SENS):  # Calculate weight only for camera sensor
                 # NormalizedSensor in [-1,1]
                 # normalizedSensor = min((totalPresence[i] - (cl.CAMERA_MAX[i] / 2)) / (cl.CAMERA_MAX[i] / 2),
                 #                        1.0)
-                left += normalizedSensor * evaluee.memome[i + cl.NB_DIST_SENS]
-                right += normalizedSensor * evaluee.memome[i + cl.NB_DIST_SENS + (cl.NN_WEIGHTS_NO_HIDDEN / 2)]
+                #left += normalizedSensor * evaluee.memome[i + cl.NB_DIST_SENS]
+                #right += normalizedSensor * evaluee.memome[i + cl.NB_DIST_SENS + (cl.NN_WEIGHTS_NO_HIDDEN / 2)]
             # Add bias weights
             left += evaluee.memome[(cl.NN_WEIGHTS_NO_HIDDEN / 2) - 1]
             right += evaluee.memome[cl.NN_WEIGHTS_NO_HIDDEN - 1]
@@ -844,10 +845,20 @@ class Simulation(threading.Thread):
                 sensorpenalty = (psValues[i] / float(cl.SENSOR_MAX[i]))
         if sensorpenalty > 1:
             sensorpenalty = 1
+        
+        speedpenalty = 0
+        if motorspeed[LEFT] > motorspeed[RIGHT]:
+            speedpenality = float((motorspeed[LEFT] - motorspeed[RIGHT])) / float(pr.real_max_speed)
+        else:
+            speedpenality = float((motorspeed[RIGHT] - motorspeed[LEFT])) / float(pr.real_max_speed)
+        if speedpenality > 1:
+            speedpenality = 1
 
         # Normalize all the part of the fitness from -1 to 1
-        normalizedSensor = (abs(motorspeed[LEFT]) + abs(motorspeed[RIGHT])) / (pr.real_max_speed * 2)
-        fitness_obs = float(normalizedSensor) * (1 - sensorpenalty)
+        #normalizedSensor = (abs(motorspeed[LEFT]) + abs(motorspeed[RIGHT])) / (pr.real_max_speed * 2)
+        normalizedSensor = (motorspeed[LEFT] + motorspeed[RIGHT] -(-pr.real_max_speed*2)) / ((pr.real_max_speed*2) - (-pr.real_max_speed*2))
+        fitness_obs = float(normalizedSensor) * (1 - sensorpenalty) * (1 - speedpenality)
+
 
         found = False
 
@@ -865,9 +876,8 @@ class Simulation(threading.Thread):
         if total_area_goal > 15000 and normalized_fitness_box_pushing == 1:
             found = True
             # Make sound
-            self.__thymioController.soundRequest(
-                        [cl.SOUND])  # system sound -> value from 0 to 7 (4 = free-fall (scary) sound)
-            self.__waitForControllerResponse()
+            #self.__thymioController.soundRequest([cl.SOUND])  # system sound -> value from 0 to 7 (4 = free-fall (scary) sound)
+            #self.__waitForControllerResponse()
             # print goal
             self.__simLogger.info("GOAL REACHED\t")
 

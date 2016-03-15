@@ -20,12 +20,12 @@ class NEATTask:
 		outputDir = os.path.join(OUTPUT_PATH, experimentName)
 		mkdir_p(outputDir)
 		mkdir_p(PICKLED_DIR)
-		logFilename = os.path.join(outputDir, experimentName + '_' + commit_sha + '.log')
+		logFilename = os.path.join(outputDir, experimentName + '_' + str(commit_sha) + '.log')
 		simHandler = logging.FileHandler(logFilename)
 		simHandler.setFormatter(FORMATTER)
 		self.logger.addHandler(simHandler)
 
-		self.jsonLogFilename = os.path.join(outputDir, experimentName + '_' + commit_sha + '.json')
+		self.jsonLogFilename = os.path.join(outputDir, experimentName + '_' + str(commit_sha) + '.json')
 
 		self.evaluations = evaluations
 		self.timeStep = timeStep
@@ -45,7 +45,7 @@ class NEATTask:
 			task.fitness += fit
 		def main_lambda(task):
 			if task.evaluations_taken == self.evaluations:
-				stopThymio(thymioController)
+				stopThymio(self.thymioController)
 				task.loop.quit()
 				return False 
 			ret_value =  self._step(evaluee, lambda (fit): update_fitness(self, fit))

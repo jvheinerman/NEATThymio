@@ -1,6 +1,6 @@
 import os, threading, socket, select, struct, pickle, errno, shutil, time
 
-N_THYMIOS = 6
+N_THYMIOS = 4
 OUTPUT_FILE_RECEIVER_PORT = 23456
 CURRENT_FILE_PATH = os.path.abspath(os.path.dirname(__file__))
 RECEIVED_OUTPUTS_PATH = os.path.join(CURRENT_FILE_PATH, 'received_outputs')
