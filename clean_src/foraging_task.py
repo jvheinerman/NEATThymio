@@ -2,8 +2,8 @@
 
 from helpers import *
 from parameters import *
-from neat_task import NEATTask
-from CameraVision import *
+from task_evaluator import TaskEvaluator
+from cameravision import *
 import classes as cl
 from peas.networks.rnn import NeuralNetwork
 
@@ -19,35 +19,38 @@ import socket
 import thread
 
 EVALUATIONS = 1000
-MAX_MOTOR_SPEED = 300
+MAX_MOTOR_SPEED = 150
 TIME_STEP = 0.005
 ACTIVATION_FUNC = 'tanh'
 POPSIZE = 20
 GENERATIONS = 100
+TARGET_SPECIES = 8
 SOLVED_AT = EVALUATIONS * 2
 EXPERIMENT_NAME = 'NEAT_foraging_task'
 
-INITIAL_ENERGY = 500
-MAX_ENERGY = 1000
-ENERGY_DECAY = 1
-MAX_STEPS = 10000
+INITIAL_ENERGY = 100
+MAX_ENERGY = 200
+ENERGY_DECAY = 5
+MAX_STEPS = 500
+EXPECTED_FPS = 4
 
-PUCK_BONUS_SCALE = 3
-GOAL_BONUS_SCALE = 3
+PUCK_BONUS_SCALE = 5
+GOAL_BONUS_SCALE = 5
 GOAL_REACHED_BONUS = INITIAL_ENERGY
+BACKWARD_PUNISH_SCALE = 20
 
 CURRENT_FILE_PATH = os.path.abspath(os.path.dirname(__file__))
 AESL_PATH = os.path.join(CURRENT_FILE_PATH, 'asebaCommands.aesl')
 
-class ForagingTask(NEATTask):
+class ForagingTask(TaskEvaluator):
 
     def __init__(self, thymioController, commit_sha, debug=False, experimentName='NEAT_task', evaluations=1000, timeStep=0.005, activationFunction='tanh', popSize=1, generations=100, solvedAt=1000):
-        NEATTask.__init__(self, thymioController, commit_sha, debug, experimentName, evaluations, timeStep, activationFunction, popSize, generations, solvedAt)
+        TaskEvaluator.__init__(self, thymioController, commit_sha, debug, experimentName, evaluations, timeStep, activationFunction, popSize, generations, solvedAt)
         self.camera = CameraVisionVectors(False, self.logger)
         self.ctrl_thread_started = False
         self.img_thread_started = False
         self.individuals_evaluated = 0
-        
+
     def _step(self, evaluee, callback):
         while not self.camera.img_ready:
             time.sleep(.01)
@@ -64,15 +67,17 @@ class ForagingTask(NEATTask):
             self.prev_presence = self.presence
             self.presence = tuple(presence_box) + tuple(presence_goal)
 
-            inputs = np.hstack(([x if not x == -np.inf else -10000 for x in self.presence], 1))
+            has_box = 1 if presence_box[0] == 0 else 0
+
+            inputs = np.hstack(([x if not x == -np.inf else -10000 for x in self.presence], has_box, 1))
             inputs[::2] = inputs[::2] / self.camera.MAX_DISTANCE
 
             out = NeuralNetwork(evaluee).feed(inputs)
             left, right = list(out[-2:])
-            motorspeed = { 'left': left, 'right': right }
-            writeMotorSpeed(self.thymioController, motorspeed)
+            self.motorspeed = { 'left': left, 'right': right }
+            writeMotorSpeed(self.thymioController, self.motorspeed, max_speed=MAX_MOTOR_SPEED)
         else:
-            time.sleep(.1)
+            time.sleep(.001)
 
         callback(self.getEnergyDelta())
         return True
@@ -82,8 +87,14 @@ class ForagingTask(NEATTask):
 
     def getEnergyDelta(self):
         global img_client
-        if img_client and not self.camera.merged_binary is None:
-            send_image(img_client, self.camera.merged_binary)
+        if img_client and not self.camera.binary_channels is None:
+            send_image(img_client, self.camera.binary_channels, self.energy,
+                       self.presence[0], self.presence[2])
+
+        speedpenalty = 0
+        if self.motorspeed['left'] < 0 and self.motorspeed['right'] < 0:
+            speedpenalty = (self.motorspeed['left'] / float(MAX_MOTOR_SPEED)) * (self.motorspeed['right'] / MAX_MOTOR_SPEED)
+            speedpenalty = np.sqrt(speedpenalty) * BACKWARD_PUNISH_SCALE
 
         self.presence = [x if not x == -np.inf else self.camera.MAX_DISTANCE for x in self.presence]
         self.prev_presence = [x if not x == -np.inf else self.camera.MAX_DISTANCE for x in self.prev_presence]
@@ -96,13 +107,13 @@ class ForagingTask(NEATTask):
         elif self.presence[0] != 0 and self.prev_presence[0] == 0:
             self.getLogger().info(str(self.individuals_evaluated) + ' > Lost puck')
 
-        energy_delta = PUCK_BONUS_SCALE * (self.prev_presence[0] - self.presence[0])
-        
+        energy_delta = speedpenalty + PUCK_BONUS_SCALE * (self.prev_presence[0] - self.presence[0])
+
         # print self.presence
         if self.presence[0] == 0:
-            energy_delta = GOAL_BONUS_SCALE * (self.prev_presence[2] - self.presence[2])
+            energy_delta = speedpenalty + GOAL_BONUS_SCALE * (self.prev_presence[2] - self.presence[2])
 
-        if self.camera.goal_reached() and self.presence[2] < 40:
+        if self.camera.goal_reached(self.presence[0], self.presence[2], MIN_GOAL_DIST):
             print '===== Goal reached!'
             stopThymio(self.thymioController)
 
@@ -111,18 +122,21 @@ class ForagingTask(NEATTask):
                 time.sleep(.3)
                 self.thymioController.SendEventName('PlayFreq', [0, -1], reply_handler=dbusReply, error_handler=dbusError)
                 time.sleep(.7)
-            
+
             time.sleep(1)
             energy_delta = GOAL_REACHED_BONUS
 
             self.getLogger().info(str(self.individuals_evaluated) + ' > Goal reached')
 
         # if energy_delta: print('Energy delta %d' % energy_delta)
-        
+
+        self.step_time = time.time()
+
         return energy_delta
 
     def evaluate(self, evaluee):
         self.frame_rate_counter = 0
+        self.step_time = time.time()
 
         global ctrl_client
         if ctrl_client and not self.ctrl_thread_started:
@@ -140,13 +154,13 @@ class ForagingTask(NEATTask):
             if task.energy <= 0 or task.evaluations_taken >= MAX_STEPS:
                 stopThymio(thymioController)
                 task.loop.quit()
-                
+
                 if task.energy <= 0:
                     print 'Energy exhausted'
                 else:
                     print 'Time exhausted'
-                
-                return False 
+
+                return False
             ret_value =  task._step(evaluee, lambda (energy): update_energy(task, energy))
             task.evaluations_taken += 1
             task.energy -= ENERGY_DECAY
@@ -154,7 +168,7 @@ class ForagingTask(NEATTask):
             return ret_value
         gobject.timeout_add(int(self.timeStep * 1000), lambda: main_lambda(self))
         # glib.idle_add(lambda: main_lambda(self))
-        
+
         print 'Starting camera...'
         try:
             self.camera = CameraVisionVectors(False, self.logger)
@@ -162,7 +176,7 @@ class ForagingTask(NEATTask):
             # time.sleep(2)
         except RuntimeError, e:
             print 'Camera already started!'
-        
+
         print 'Starting loop...'
         self.loop.run()
 
@@ -179,12 +193,6 @@ class ForagingTask(NEATTask):
 
         return { 'fitness': fitness }
 
-    def exit(self, value = 0):
-        print 'Exiting...'
-        # sys.exit(value)
-        self.loop.quit()
-        thread.interrupt_main()
-
 
 def check_stop(task):
     global ctrl_client
@@ -200,7 +208,7 @@ def release_resources(thymio):
     global ctrl_client
     ctrl_serversocket.close()
     if ctrl_client: ctrl_client.close()
-    
+
     global img_serversocket
     global img_client
     img_serversocket.close()
@@ -220,7 +228,10 @@ def write_header(client, boundary='thymio'):
             "\r\n" +
             "--" + boundary + "\r\n")
 
-def send_image(client, image, boundary='thymio'):
+def send_image(client, binary_channels, energy, box_dist, goal_dist, boundary='thymio'):
+    red = np.zeros(binary_channels[0].shape, np.uint8)
+    cv2.putText(red, 'E: {0:.2f} P: {1:.0f} G: {2:.0f}'.format(energy, box_dist, goal_dist), (5, 20), cv2.FONT_HERSHEY_PLAIN, 1, (255, ), 1, 255)
+    image = np.dstack(binary_channels + [red])
     _, encoded = cv2.imencode('.png', image)
     image_bytes = bytearray(np.asarray(encoded))
     client.send("Content-type: image/png\r\n")
@@ -231,14 +242,24 @@ def send_image(client, image, boundary='thymio'):
 
 if __name__ == '__main__':
     from peas.methods.neat import NEATPopulation, NEATGenotype
-    genotype = lambda: NEATGenotype(inputs=5, outputs=2, types=[ACTIVATION_FUNC])
-    pop = NEATPopulation(genotype, popsize=POPSIZE)
+    genotype = lambda: NEATGenotype(
+        inputs=6,
+        outputs=2,
+        types=[ACTIVATION_FUNC],
+        prob_add_node=0.1,
+        weight_range=(-3, 3),
+        stdev_mutate_weight=.25,
+        stdev_mutate_bias=.25,
+        stdev_mutate_response=.25,
+        feedforward=False)
+    pop = NEATPopulation(genotype, popsize=POPSIZE, target_species=TARGET_SPECIES, stagnation_age=5)
 
     log = { 'neat': {}, 'generations': [] }
 
     # log neat settings
     dummy_individual = genotype()
     log['neat'] = {
+        'max_speed': MAX_MOTOR_SPEED,
         'evaluations': EVALUATIONS,
         'activation_function': ACTIVATION_FUNC,
         'popsize': POPSIZE,
@@ -247,11 +268,14 @@ if __name__ == '__main__':
         'max_energy': MAX_ENERGY,
         'energy_decay': ENERGY_DECAY,
         'max_steps': MAX_STEPS,
-        'pucl_bonus_scale': PUCK_BONUS_SCALE,
+        'puck_bonus_scale': PUCK_BONUS_SCALE,
         'goal_bonus_scale': GOAL_BONUS_SCALE,
         'goal_reached_bonus': GOAL_REACHED_BONUS,
         'elitism': pop.elitism,
         'tournament_selection_k': pop.tournament_selection_k,
+        'target_species': pop.target_species,
+        'stagnation_age': pop.stagnation_age,
+        'feedforward': dummy_individual.feedforward,
         'initial_weight_stdev': dummy_individual.initial_weight_stdev,
         'prob_add_node': dummy_individual.prob_add_node,
         'prob_add_conn': dummy_individual.prob_add_conn,
@@ -260,6 +284,9 @@ if __name__ == '__main__':
         'prob_reenable_conn': dummy_individual.prob_reenable_conn,
         'prob_disable_conn': dummy_individual.prob_disable_conn,
         'prob_reenable_parent': dummy_individual.prob_reenable_parent,
+        'stdev_mutate_weight': dummy_individual.stdev_mutate_weight,
+        'stdev_mutate_bias': dummy_individual.stdev_mutate_bias,
+        'stdev_mutate_response': dummy_individual.stdev_mutate_response,
         'weight_range': dummy_individual.weight_range
     }
 

@@ -19,5 +19,5 @@ else
     export DBUS_SESSION_BUS_PID
     (asebamedulla "ser:device=/dev/ttyACM0" &)
 
-    python obstacle_avoindance.py $1 $2
+    python $1 $2 $3
 fi

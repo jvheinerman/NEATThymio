@@ -12,6 +12,7 @@ import cv2
 
 import picamera
 
+from parameters import MIN_FPS, MIN_GOAL_DIST
 
 # Recognize color using the camera
 class CameraVision(threading.Thread):
@@ -141,6 +142,8 @@ class CameraVision(threading.Thread):
                 # capture into stream
                 stream = io.BytesIO()
                 for foo in camera.capture_continuous(stream, 'jpeg'):
+                    last_time = time.time()
+
                     data = np.fromstring(stream.getvalue(), dtype=np.uint8)
                     # "Decode" the image from the array, preserving colour
                     image = cv2.imdecode(data, 1)
@@ -211,6 +214,8 @@ class CameraVision(threading.Thread):
                     if self._stopped():
                         self.__simLogger.debug("Stopping camera thread")
                         break
+                    print "time left:", (time.time() - last_time)
+                    time.sleep(MIN_FPS - (time.time() - last_time))
             cv2.destroyAllWindows()
         except Exception as e:
             self.__simLogger.critical("Camera exception: " + str(e) + str(
@@ -231,7 +236,7 @@ class CameraVisionVectors(CameraVision):
         self.red_upper = np.array([180, 255, 255])
 
         # define range of green color in HSV
-        self.green_lower = np.array([15, 190, 30])
+        self.green_lower = np.array([15, 165, 30])
         self.green_upper = np.array([55, 255, 155])
 
         # define range of white color in HSV
@@ -244,7 +249,7 @@ class CameraVisionVectors(CameraVision):
         self.black_upper = np.array([180, 255, 30])
 
         self.blur = (19, 19)
-        self.merged_binary = None
+        self.binary_channels = None
         self.img_ready = False
 
     def find_shortest(self, binary, check_puck=False):
@@ -275,21 +280,20 @@ class CameraVisionVectors(CameraVision):
 
         return cv2.inRange(self.hsv, lower_color, upper_color)
 
-    def img_to_vector(self, binary, check_puck=False):        
+    def img_to_vector(self, binary, check_puck=False):
         # if not check_puck:
         #    pickle.dump(binary, open('binary.p', 'wb'))
         #    import sys
         #    print 'Exiting...'
         #    sys.exit(0)
-        
+
         dist, angle = self.find_shortest(binary, check_puck=check_puck)
 
         # print('Found distance: ' + str(dist) + ' and angle: ' + str(angle))
         return dist, angle
 
-    def goal_reached(self):
-        # top_img = self.goal_binary[:self.goal_binary.shape[0] / 2, :]
-        return np.sum(self.goal_binary) > 50000 and self.presence[0] == 0
+    def goal_reached(self, box_dist, goal_dist, MIN_GOAL_DIST=100):
+        return goal_dist <= MIN_GOAL_DIST and box_dist == 0
 
     def run(self):
         try:
@@ -323,12 +327,11 @@ class CameraVisionVectors(CameraVision):
 
                     self.puck_binary = self.get_binary_img(check_puck=True)
                     self.presence = self.img_to_vector(self.puck_binary, check_puck=True)
-                    
+
                     self.goal_binary = self.get_binary_img()
                     self.presenceGoal = self.img_to_vector(self.goal_binary)
 
-                    red = np.zeros(self.puck_binary.shape, np.uint8)
-                    self.merged_binary = np.dstack([self.goal_binary, self.puck_binary, red])
+                    self.binary_channels = [self.goal_binary, self.puck_binary]
 
                     self.img_ready = True
 

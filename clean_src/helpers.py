@@ -1,4 +1,5 @@
 import sys, os, errno
+from parameters import MAX_MOTOR_SPEED
 
 MAX_MOTOR_SPEED = 150
 RAND_MAX = sys.maxint
@@ -36,9 +37,9 @@ def getNextIDPath(path):
         nextID = int(filelist[-1][0]) + 1
     return str(nextID)
 
-def writeMotorSpeed(controller, motorspeed):
-    controller.SetVariable("thymio-II", "motor.left.target", [motorspeed['left'] * MAX_MOTOR_SPEED])
-    controller.SetVariable("thymio-II", "motor.right.target", [motorspeed['right'] * MAX_MOTOR_SPEED])
+def writeMotorSpeed(controller, motorspeed, max_speed=MAX_MOTOR_SPEED):
+    controller.SetVariable("thymio-II", "motor.left.target", [motorspeed['left'] * max_speed])
+    controller.SetVariable("thymio-II", "motor.right.target", [motorspeed['right'] * max_speed])
 
 
 def getProxReadings(controller, ok_callback, nok_callback):
