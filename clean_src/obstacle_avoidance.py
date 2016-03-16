@@ -33,7 +33,7 @@ POPSIZE = 10
 GENERATIONS = 30
 TARGET_SPECIES = 2
 SOLVED_AT = EVALUATIONS * 2
-EXPERIMENT_NAME = 'NEAT_obstacle_avoidance_3_arena_1'
+EXPERIMENT_NAME = 'NEAT_obstacle_avoidance_3_arena_0'
 
 CURRENT_FILE_PATH = os.path.abspath(os.path.dirname(__file__))
 MAIN_LOG_PATH = os.path.join(CURRENT_FILE_PATH, 'log_main')
