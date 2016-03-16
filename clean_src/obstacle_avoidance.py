@@ -30,10 +30,10 @@ EVALUATIONS = 1000
 TIME_STEP = 0.005
 ACTIVATION_FUNC = 'tanh'
 POPSIZE = 10
-GENERATIONS = 100
+GENERATIONS = 30
 TARGET_SPECIES = 2
 SOLVED_AT = EVALUATIONS * 2
-EXPERIMENT_NAME = 'NEAT_obstacle_avoidance'
+EXPERIMENT_NAME = 'NEAT_obstacle_avoidance_3_arena_1'
 
 CURRENT_FILE_PATH = os.path.abspath(os.path.dirname(__file__))
 MAIN_LOG_PATH = os.path.join(CURRENT_FILE_PATH, 'log_main')
@@ -59,8 +59,8 @@ class ObstacleAvoidance(TaskEvaluator):
 
     def _step(self, evaluee, callback):
         def ok_call(psValues):
-            psValues = np.array([psValues[0], psValues[2], psValues[4], psValues[5], psValues[6], 1])
-
+            psValues = np.array([psValues[0], psValues[2], psValues[4], psValues[5], psValues[6], 1],dtype='f')
+            psValues[0:5] = [(float(x) - float(pr.SENSOR_MAX[0]/2))/float(pr.SENSOR_MAX[0]/2) for x in psValues[0:5]]
             left, right = list(NeuralNetwork(evaluee).feed(psValues)[-2:])
 
             motorspeed = { 'left': left, 'right': right }
@@ -79,23 +79,21 @@ class ObstacleAvoidance(TaskEvaluator):
         # Calculate penalty for rotating
         speedpenalty = 0
         if motorspeed['left'] > motorspeed['right']:
-            speedpenalty = float((motorspeed['left'] - motorspeed['right'])) / float(pr.real_max_speed)
+            speedpenalty = float((motorspeed['left'] - motorspeed['right']))
         else:
-            speedpenalty = float((motorspeed['right'] - motorspeed['left'])) / float(pr.real_max_speed)
-        if speedpenalty > 1:
-            speedpenalty = 1
+            speedpenalty = float((motorspeed['right'] - motorspeed['left']))
+    
 
         # Calculate normalized distance to the nearest object
         sensorpenalty = 0
         for i, sensor in enumerate(observation[:-1]):
-            distance = sensor / float(pr.SENSOR_MAX[i])
+            distance = sensor
             if sensorpenalty < distance:
                 sensorpenalty = distance
-        if sensorpenalty > 1:
-            sensorpenalty = 1
+
 
         # fitness for 1 timestep in [-2, 2]
-        return float(motorspeed['left'] + motorspeed['right']) * (1 - speedpenalty) * (1 - sensorpenalty)
+        return float(motorspeed['left'] + motorspeed['right']) * (1 - min(speedpenalty,1)) * (1 - min(sensorpenalty,1))
 
 
 def check_stop(task):
@@ -105,6 +103,7 @@ def check_stop(task):
     if line.startswith('stop'):
         release_resources(task.thymioController)
         task.exit(0)
+        sys.exit(1)
     task.ctrl_thread_started = False
 
 def release_resources(thymio):
@@ -188,8 +187,8 @@ if __name__ == '__main__':
                 'conn_genes': copied_connections,
                 'stats': deepcopy(individual.stats)
             })
-        champion_file = task.experimentName + '_{}_{}.p'.format(commit_sha, population.generation)
-        generation['champion_file'] = champion_file
+        #champion_file = task.experimentName + '_{}_{}.p'.format(commit_sha, population.generation)
+        #generation['champion_file'] = champion_file
         generation['species'] = [len(species.members) for species in population.species]
         log['generations'].append(generation)
 

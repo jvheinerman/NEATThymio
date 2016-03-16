@@ -18,6 +18,6 @@ else
     export DBUS_SESSION_BUS_ADDRESS
     export DBUS_SESSION_BUS_PID
     (asebamedulla "ser:device=/dev/ttyACM0" &)
-
+    #above all for killing processes that are maybe still open
     python $1 $2 $3
 fi

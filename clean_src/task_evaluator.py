@@ -21,7 +21,7 @@ class TaskEvaluator:
         outputDir = os.path.join(OUTPUT_PATH, experimentName)
         mkdir_p(outputDir)
         mkdir_p(PICKLED_DIR)
-        logFilename = os.path.join(outputDir, experimentName + '_' + commit_sha + '.log')
+        #logFilename = os.path.join(outputDir, experimentName + '_' + commit_sha + '.log')
         simHandler = logging.FileHandler(logFilename)
         simHandler.setFormatter(FORMATTER)
         self.logger.addHandler(simHandler)

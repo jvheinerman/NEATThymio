@@ -8,7 +8,7 @@ starter_number = 0
 
 motorspeed = [0, 0]
 NB_DIST_SENS = 5
-SENSOR_MAX = [4000] * 5
+SENSOR_MAX = [4500] * 5
 TIME_STEP = 0.05
 ps_value = [0.0 for x in range(NB_DIST_SENS)]
 
@@ -20,7 +20,7 @@ threshold = 0.5              # fitness/maximum fitness value to exceed
 total_evals = 1000           # one eval is lifetime/social or reevaluation
 max_robot_lifetime = 1000    # either 200 or 100
 seed = 0                     # experiment seed
-real_speed_percentage = 0.3  # percentage of maximum speed used
+#real_speed_percentage = 0.3  # percentage of maximum speed used
 
 # reevaluate parameters
 eval_time = 2000                    # Evaluation time, in steps
@@ -28,9 +28,9 @@ tau = int(eval_time * 0.05)         # Recovery  period tau, in steps -> 5% of ev
 tau_goal = int(eval_time * 0.25)    # Recovery after goal -> must be longer than normal tau -> 25% of evaltime
 re_weight = 0.8                     # part or reevaluation fitness that stays the same
 
-MAX_MOTOR_SPEED = 300
+MAX_MOTOR_SPEED = 250
 max_fitness = eval_time * 6
-real_max_speed = real_speed_percentage * MAX_MOTOR_SPEED
+#real_max_speed = real_speed_percentage * MAX_MOTOR_SPEED
 
 MIN_FPS = 0.2                       # Minimum frame rate for camera updates
 MIN_GOAL_DIST = 180
