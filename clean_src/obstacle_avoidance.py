@@ -48,9 +48,11 @@ class ObstacleAvoidance(TaskEvaluator):
     def __init__(self, thymioController, commit_sha, debug=False, experimentName=EXPERIMENT_NAME, evaluations=1000, timeStep=0.005, activationFunction='tanh', popSize=1, generations=100, solvedAt=1000):
         TaskEvaluator.__init__(self, thymioController, commit_sha, debug, experimentName, evaluations, timeStep, activationFunction, popSize, generations, solvedAt)
         self.ctrl_thread_started = False
+        print "New obstacle avoidance task"
 
     def evaluate(self, evaluee):
         global ctrl_client
+        print "thread started:", self.ctrl_thread_started
         if ctrl_client and not self.ctrl_thread_started:
             thread.start_new_thread(check_stop, (self, ))
             self.ctrl_thread_started = True
@@ -77,12 +79,13 @@ class ObstacleAvoidance(TaskEvaluator):
 
     def getFitness(self, motorspeed, observation):
         # Calculate penalty for rotating
-        speedpenalty = 0
-        if motorspeed['left'] > motorspeed['right']:
-            speedpenalty = float((motorspeed['left'] - motorspeed['right']))
-        else:
-            speedpenalty = float((motorspeed['right'] - motorspeed['left']))
-    
+        # speedpenalty = 0
+        # if motorspeed['left'] > motorspeed['right']:
+        #     speedpenalty = float((motorspeed['left'] - motorspeed['right']))
+        # else:
+        #     speedpenalty = float((motorspeed['right'] - motorspeed['left']))
+
+        speedpenalty = float(abs(motorspeed['left'] - motorspeed['right']))
 
         # Calculate normalized distance to the nearest object
         sensorpenalty = 0
@@ -101,6 +104,7 @@ def check_stop(task):
     f = ctrl_client.makefile()
     line = f.readline()
     if line.startswith('stop'):
+        f.write('stop\n')
         release_resources(task.thymioController)
         task.exit(0)
         sys.exit(1)
@@ -191,7 +195,6 @@ if __name__ == '__main__':
         #generation['champion_file'] = champion_file
         generation['species'] = [len(species.members) for species in population.species]
         log['generations'].append(generation)
-
         task.getLogger().info(', '.join([str(ind.stats['fitness']) for ind in population.population]))
         jsonLog = open(task.jsonLogFilename, "w")
         json.dump(log, jsonLog)
