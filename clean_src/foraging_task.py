@@ -191,7 +191,7 @@ class ForagingTask(TaskEvaluator):
 
         self.individuals_evaluated += 1
 
-        return { 'fitness': fitness }
+        return {'fitness': fitness}
 
 
 def check_stop(task):

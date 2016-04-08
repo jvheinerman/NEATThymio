@@ -7,7 +7,7 @@ import numpy as np
 import io
 import pickle
 import time
-
+from puck_finder import Robot
 import cv2
 
 import picamera
@@ -134,7 +134,9 @@ class CameraVision(threading.Thread):
         return presence
 
     def run(self):
+        robot = Robot()
         try:
+            # robot.driveToPuck([0,0,0,0])
             with picamera.PiCamera() as camera:
                 camera.resolution = (self.CAMERA_WIDTH, self.CAMERA_HEIGHT)
                 camera.framerate = 30
@@ -159,12 +161,12 @@ class CameraVision(threading.Thread):
                     valueDivisionVertical = math.floor((self.CAMERA_HEIGHT / 4) / self.scale_down)
 
                     # Divide image in three pieces
-                    sub_image_left = hsv[0:valueDivisionVertical * 3, 0:0 + valueDivision]
-                    sub_image_central = hsv[0:valueDivisionVertical * 3,
+                    sub_image_left = image[0:valueDivisionVertical * 3, 0:0 + valueDivision]
+                    sub_image_central = image[0:valueDivisionVertical * 3,
                                         valueDivision:valueDivision + valueDivision]
-                    sub_image_right = hsv[0:valueDivisionVertical * 3,
+                    sub_image_right = image[0:valueDivisionVertical * 3,
                                       valueDivision + valueDivision: (self.CAMERA_WIDTH / self.scale_down)]
-                    sub_image_bottom = hsv[valueDivisionVertical * 3:]
+                    sub_image_bottom = image[valueDivisionVertical * 3:]
 
                     image_total = {"left": sub_image_left, "central": sub_image_central,
                                    "right": sub_image_right, "bottom": sub_image_bottom}
@@ -175,12 +177,20 @@ class CameraVision(threading.Thread):
 
                     # define range of red color in HSV
                     # My value
-                    red_lower = np.array([120, 80, 0])
-                    red_upper = np.array([180, 255, 255])
+                    red_lower = np.array([0, 100, 100])
+                    red_upper = np.array([15, 255, 255])
+
+                    #define range of red color in BGR
+                    red_lower_rgb = np.array([0, 0, 75], dtype="uint8")
+                    red_upper_rgb = np.array([90, 75, 255], dtype="uint8")
 
                     # define range of green color in HSV
-                    green_lower = np.array([30, 75, 75])
-                    green_upper = np.array([60, 255, 255])
+                    green_lower = np.array([40, 75, 35])
+                    green_upper = np.array([55, 255, 255])
+
+                    #define range of green color in BGR
+                    green_lower_bgr = np.array([0, 100, 0])
+                    green_upper_bgr = np.array([80, 255, 80])
 
                     # define range of white color in HSV
                     test = 110
@@ -191,21 +201,33 @@ class CameraVision(threading.Thread):
                     black_lower = np.array([0, 0, 0])
                     black_upper = np.array([180, 255, 30])
 
-                    self.presence = self.retContours(red_lower, red_upper, image_total, 0)
+                    self.presence = self.retContours(red_lower_rgb, red_upper_rgb, image_total, 0)
+                    robot.driveToPuck(self.presence)
 
-                    # black color changed into blu color (thymio doesn't have blu part. Only goal is blu)
+                # black color changed into blu color (thymio doesn't have blu part. Only goal is blu)
                     self.presenceGoal = self.retContours(lower_blue, upper_blue, image_total, 1)
 
-                    # print("presenceRed {}".format(self.presence))
+                    print("presenceRed {}".format(self.presence))
                     # print("presenceBlack {}".format(self.presenceGoal))
                     # print("presenceBlack {}".format(self.presenceGoal))
+
+                    #check for the red color range
+                    red_color_mask_rgb = cv2.inRange(image, red_lower_rgb, red_upper_rgb)
+                    red_color_mask = cv2.inRange(hsv, red_lower, red_upper)
+
+                    #check for the green color range
+                    green_color_mask = cv2.inRange(hsv, green_lower, green_upper)
+                    green_color_mask_bgr = cv2.inRange(image, green_lower_bgr, green_upper_bgr)
 
                     if self.camera:
                         cv2.imshow("ColourTrackerWindow", image)
-                    # cv2.imshow("sub_image_left", sub_image_left)
-                    # cv2.imshow("sub_image_central", sub_image_central)
-                    # cv2.imshow("sub_image_right", sub_image_right)
-                    # cv2.imshow("sub_image_bottom", sub_image_bottom)
+
+                    # cv2.imshow("hsv_image", hsv)
+                    # cv2.imshow("rgb_image", image)
+                    # # cv2.imshow("red_color_mask", red_color_mask)
+                    # cv2.imshow("red_color_mask_rgb", red_color_mask_rgb)
+                    # cv2.imshow("green_color_mask_rgb", green_color_mask_bgr)
+                    # cv2.waitKey(5)
 
                     stream.truncate()
                     stream.seek(0)
@@ -215,11 +237,18 @@ class CameraVision(threading.Thread):
                         self.__simLogger.debug("Stopping camera thread")
                         break
                     print "time left:", (time.time() - last_time)
-                    time.sleep(MIN_FPS - (time.time() - last_time))
+                    sleep_time = float(MIN_FPS - (time.time() - last_time))
+                    if(sleep_time > 0):
+                        time.sleep(float(MIN_FPS - (time.time() - last_time)))
             cv2.destroyAllWindows()
         except Exception as e:
-            self.__simLogger.critical("Camera exception: " + str(e) + str(
-                sys.exc_info()[0]) + ' - ' + traceback.format_exc())
+            robot.stop()
+            print "Error: ", str(e), str(sys.exc_info()[0]) + ' - ' + traceback.format_exc()
+            # self.__simLogger.critical("Camera exception: " + str(e) + str(
+            #     sys.exc_info()[0]) + ' - ' + traceback.format_exc())
+        except (KeyboardInterrupt, SystemExit):
+            robot.stop()
+            raise
 
 
 class CameraVisionVectors(CameraVision):
@@ -346,3 +375,7 @@ class CameraVisionVectors(CameraVision):
         except Exception as e:
             print("Camera exception: " + str(e) + str(
                 sys.exc_info()[0]) + ' - ' + traceback.format_exc())
+
+if __name__ == "__main__":
+    camera_vision = CameraVision(False, None)
+    camera_vision.run()
