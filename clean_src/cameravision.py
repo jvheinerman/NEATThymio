@@ -141,6 +141,14 @@ class CameraVision(threading.Thread):
                 camera.resolution = (self.CAMERA_WIDTH, self.CAMERA_HEIGHT)
                 camera.framerate = 30
 
+                time.sleep(2)
+                # Now fix the values
+                camera.shutter_speed = camera.exposure_speed
+                camera.exposure_mode = 'off'
+                g = camera.awb_gains
+                camera.awb_mode = 'off'
+                camera.awb_gains = g
+
                 # capture into stream
                 stream = io.BytesIO()
                 for foo in camera.capture_continuous(stream, 'jpeg'):
@@ -150,11 +158,11 @@ class CameraVision(threading.Thread):
                     # "Decode" the image from the array, preserving colour
                     image = cv2.imdecode(data, 1)
 
-                    # Convert BGR to HSV
-                    image = cv2.GaussianBlur(image, (5, 5), 0)
-                    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-                    # Resize image
-                    hsv = cv2.resize(hsv, (len(image[0]) / self.scale_down, len(image) / self.scale_down))
+                    # # Convert BGR to HSV
+                    # # image = cv2.GaussianBlur(image, (5, 5), 0)
+                    # hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+                    # # Resize image
+                    # hsv = cv2.resize(hsv, (len(image[0]) / self.scale_down, len(image) / self.scale_down))
 
                     # Calculate value to divide the image into three/four different part
                     valueDivision = math.floor((self.CAMERA_WIDTH / 3) / self.scale_down)
@@ -171,14 +179,17 @@ class CameraVision(threading.Thread):
                     image_total = {"left": sub_image_left, "central": sub_image_central,
                                    "right": sub_image_right, "bottom": sub_image_bottom}
 
-                    # define range of blue color in HSV
-                    lower_blue = np.array([80, 60, 50])
-                    upper_blue = np.array([120, 255, 255])
+                    # # define range of blue color in HSV
+                    # lower_blue = np.array([80, 60, 50])
+                    # upper_blue = np.array([120, 255, 255])
+
+                    blue_lower_bgr = np.array([75, 0, 0])
+                    blue_upper_bgr = np.array([255, 75, 80])
 
                     # define range of red color in HSV
                     # My value
-                    red_lower = np.array([0, 100, 100])
-                    red_upper = np.array([15, 255, 255])
+                    red_lower = np.array([0, 100, 100], dtype="uint8")
+                    red_upper = np.array([15, 255, 255], dtype="uint8")
 
                     #define range of red color in BGR
                     red_lower_rgb = np.array([0, 0, 75], dtype="uint8")
@@ -189,8 +200,8 @@ class CameraVision(threading.Thread):
                     green_upper = np.array([55, 255, 255])
 
                     #define range of green color in BGR
-                    green_lower_bgr = np.array([0, 100, 0])
-                    green_upper_bgr = np.array([80, 255, 80])
+                    green_lower_bgr = np.array([0, 75, 0])
+                    green_upper_bgr = np.array([60, 255, 80])
 
                     # define range of white color in HSV
                     test = 110
@@ -201,33 +212,34 @@ class CameraVision(threading.Thread):
                     black_lower = np.array([0, 0, 0])
                     black_upper = np.array([180, 255, 30])
 
-                    self.presence = self.retContours(red_lower_rgb, red_upper_rgb, image_total, 0)
-                    robot.driveToPuck(self.presence)
+                    self.presence = self.retContours(green_lower_bgr, green_upper_bgr, image_total, 0)
 
-                # black color changed into blu color (thymio doesn't have blu part. Only goal is blu)
-                    self.presenceGoal = self.retContours(lower_blue, upper_blue, image_total, 1)
+                    # black color changed into blu color (thymio doesn't have blu part. Only goal is blu)
+                    self.presenceGoal = self.retContours(blue_lower_bgr, blue_upper_bgr, image_total, 1)
 
-                    print("presenceRed {}".format(self.presence))
-                    # print("presenceBlack {}".format(self.presenceGoal))
-                    # print("presenceBlack {}".format(self.presenceGoal))
+                    # robot.updatePath({'puck': self.presence, 'target': self.presenceGoal})
+                    robot.avoidObstacle()
+
+                    # print("presencePuck {}".format(self.presence))
+                    # print("presenceGoal {}".format(self.presenceGoal))
 
                     #check for the red color range
-                    red_color_mask_rgb = cv2.inRange(image, red_lower_rgb, red_upper_rgb)
-                    red_color_mask = cv2.inRange(hsv, red_lower, red_upper)
+                    # red_color_mask_rgb = cv2.inRange(image, red_lower_rgb, red_upper_rgb)
+                    # red_color_mask = cv2.inRange(hsv, red_lower, red_upper)
 
                     #check for the green color range
-                    green_color_mask = cv2.inRange(hsv, green_lower, green_upper)
                     green_color_mask_bgr = cv2.inRange(image, green_lower_bgr, green_upper_bgr)
+                    blue_color_mask = cv2.inRange(image, blue_lower_bgr, blue_upper_bgr)
 
                     if self.camera:
                         cv2.imshow("ColourTrackerWindow", image)
 
                     # cv2.imshow("hsv_image", hsv)
                     # cv2.imshow("rgb_image", image)
-                    # # cv2.imshow("red_color_mask", red_color_mask)
-                    # cv2.imshow("red_color_mask_rgb", red_color_mask_rgb)
+                    # cv2.imshow("blue_color_mask", blue_color_mask)
+                    # # cv2.imshow("red_color_mask_rgb", red_color_mask_rgb)
                     # cv2.imshow("green_color_mask_rgb", green_color_mask_bgr)
-                    # cv2.waitKey(5)
+                    # cv2.waitKey(20)
 
                     stream.truncate()
                     stream.seek(0)

@@ -64,10 +64,12 @@ class ObstacleAvoidance(TaskEvaluator):
             psValues = np.array([psValues[0], psValues[2], psValues[4], psValues[5], psValues[6], 1],dtype='f')
             psValues[0:5] = [(float(x) - float(pr.SENSOR_MAX[0]/2))/float(pr.SENSOR_MAX[0]/2) for x in psValues[0:5]]
             left, right = list(NeuralNetwork(evaluee).feed(psValues)[-2:])
-
             motorspeed = { 'left': left, 'right': right }
 
-            writeMotorSpeed(self.thymioController, motorspeed)
+            try:
+                writeMotorSpeed(self.thymioController, motorspeed)
+            except Exception as e:
+                print str(e)
 
             callback(self.getFitness(motorspeed, psValues))
 
@@ -104,9 +106,10 @@ def check_stop(task):
     f = ctrl_client.makefile()
     line = f.readline()
     if line.startswith('stop'):
-        f.write('stop\n')
+        print "stopping"
         release_resources(task.thymioController)
         task.exit(0)
+        task.loop.quit()
         sys.exit(1)
     task.ctrl_thread_started = False
 

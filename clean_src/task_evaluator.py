@@ -81,4 +81,5 @@ class TaskEvaluator:
         print 'Exiting...'
         # sys.exit(value)
         self.loop.quit()
+        cleanup_stop_thread()
         thread.interrupt_main()
