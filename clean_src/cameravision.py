@@ -7,7 +7,6 @@ import numpy as np
 import io
 import pickle
 import time
-from puck_finder import Robot
 import cv2
 
 import picamera
@@ -25,7 +24,7 @@ class CameraVision(threading.Thread):
         self.__isCameraAlive = threading.Condition()
         self.__isStopped = threading.Event()
         self.__simLogger = simulationLogger
-        self.__imageAreaThreshold = 1000
+        self.__imageAreaThreshold = 650
 
         loaded_dist_angles = pickle.load(open("distances.p"))
         self.distances = loaded_dist_angles['distances']
@@ -51,7 +50,7 @@ class CameraVision(threading.Thread):
     def readGoalPresence(self):
         return self.presenceGoal
 
-    #  return contours with largest area in the image
+    # return contours with largest area in the image
     def retMaxArea(self, contours):
         max_area = 0
         largest_contour = None
@@ -68,13 +67,6 @@ class CameraVision(threading.Thread):
             moment = cv2.moments(contour)
             # m00 is the area
             if moment["m00"] > self.__imageAreaThreshold / self.scale_down:
-                # rect_bl = cv2.minAreaRect(contour)
-                # rect_bl = ((rect_bl[0][0] * self.scale_down, rect_bl[0][1] * self.scale_down),
-                #            (rect_bl[1][0] * self.scale_down, rect_bl[1][1] * self.scale_down), rect_bl[2])
-                # box_bl = cv2.cv.BoxPoints(rect_bl)
-                # box_bl = np.int0(box_bl)
-                # cv2.drawContours(image2, [box_bl], 0, (255, 255, 0), 2)
-                # cv2.imshow(name, image2)
                 return moment["m00"]
         return 0
 
@@ -105,6 +97,8 @@ class CameraVision(threading.Thread):
 
         binary_total = [color_binary_left, color_binary_central, color_binary_right, color_binary]
 
+        # binary_total = [binary_left, binary_central, binary_right, binary]
+
         for i in range(len(binary_total)):
             binary_total[i] = cv2.GaussianBlur(binary_total[i], (5, 5), 0)
 
@@ -133,15 +127,103 @@ class CameraVision(threading.Thread):
 
         return presence
 
-    def run(self):
-        robot = Robot()
+    def divideImage(self, image):
+        valueDivision = math.floor((self.CAMERA_WIDTH / 3) / self.scale_down)
+        valueDivisionVertical = math.floor((self.CAMERA_HEIGHT / 4) / self.scale_down)
+
+        # Divide image in three pieces
+        sub_image_left = image[0:valueDivisionVertical * 3, 0:0 + valueDivision]
+        sub_image_central = image[0:valueDivisionVertical * 3,
+                            valueDivision:valueDivision + valueDivision]
+        sub_image_right = image[0:valueDivisionVertical * 3,
+                          valueDivision + valueDivision: (self.CAMERA_WIDTH / self.scale_down)]
+        sub_image_bottom = image[valueDivisionVertical * 3:]
+
+        image_total = {"left": sub_image_left, "central": sub_image_central,
+                       "right": sub_image_right, "bottom": sub_image_bottom}
+        return image_total
+
+    def run_bgr(self, image, callback):
+        # Calculate value to divide the image into three/four different part
+        image_total = self.divideImage(image)
+
+        blue_lower_bgr = np.array([40, 0, 0])
+        blue_upper_bgr = np.array([255, 40, 40])
+
+        green_lower_bgr = np.array([0, 70, 0])
+        green_upper_bgr = np.array([75, 255, 70])
+
+        green_lower_dark_bgr = np.array([0, 30, 0])
+        green_upper_dark_bgr = np.array([20, 255, 38])
+
+        green_lower_light_bgr = np.array([0, 150, 0])
+        green_upper_light_bgr = np.array([113, 255, 133])
+
+        green_lower_superlight_bgr = np.array([0, 200, 0])
+        green_upper_superlight_bgr = np.array([140, 255, 155])
+
+        # combine the presence of lighter and darker color ranges for closer and more distant objects
+        self.presence = self.retContours(green_lower_bgr, green_upper_bgr, image_total, 1)
+        prescenceDark = self.retContours(green_lower_dark_bgr, green_upper_dark_bgr, image_total, 1)
+        presenceLight = self.retContours(green_lower_light_bgr, green_upper_light_bgr, image_total,1)
+        presenceSuperlight = self.retContours(green_lower_superlight_bgr, green_upper_superlight_bgr, image_total,1)
+        self.presence = ((np.array(self.presence) + np.array(prescenceDark) + np.array(presenceLight) +
+                          np.array(presenceSuperlight)) / 4).tolist()
+        self.presenceGoal = self.retContours(blue_lower_bgr, blue_upper_bgr, image_total, 1)
+
+        small = cv2.resize(image, dsize=(0, 0), fx=0.5, fy=0.5)
+        callback({'puck': self.presence, 'target': self.presenceGoal}, small)
+
+        # Create mask for debugging purposes
+        green_color_mask_bgr = cv2.inRange(image, green_lower_bgr, green_upper_bgr)
+        green_color_mask_dark = cv2.inRange(image, green_lower_dark_bgr, green_upper_dark_bgr)
+        green_color_mask_light = cv2.inRange(image, green_lower_light_bgr, green_upper_light_bgr)
+        green_color_mask_bgr = ((np.matrix(green_color_mask_bgr) + np.matrix(green_color_mask_dark) +
+                                 np.matrix(green_color_mask_light)) / 3)
+
+        blue_color_mask = cv2.inRange(image, blue_lower_bgr, blue_upper_bgr)
+
+        print("presencePuck {}".format(self.presence))
+        print("presenceGoal {}".format(self.presenceGoal))
+
+        return green_color_mask_bgr, blue_color_mask
+
+    def run_hsv(self, image, callback):
+        image_total = self.divideImage(image)
+
+        # define range of blue color in HSV
+        blue_lower = np.array([90, 60, 50])
+        blue_upper = np.array([120, 255, 255])
+
+        # define range of green color in HSV
+        green_lower = np.array([25, 60, 50])
+        green_upper = np.array([80, 255, 255])
+
+        self.presence = self.retContours(green_lower, green_upper, image_total, 0)
+        self.presenceGoal = self.retContours(blue_lower, blue_upper, image_total, 1)
+
+        callback({'puck': self.presence, 'target': self.presenceGoal})
+
+        # Create mask for debugging purposes
+        green_color_mask_bgr = cv2.inRange(image, green_lower, green_upper)
+        blue_color_mask = cv2.inRange(image, blue_lower, blue_upper)
+
+        print("presencePuck {}".format(self.presence))
+        print("presenceGoal {}".format(self.presenceGoal))
+
+        return green_color_mask_bgr, blue_color_mask
+
+    """
+        Run the cameravission, presence results will be reported to the callback function as array consisting of presence
+        values for the goal and for the puck
+    """
+    def run(self, callback, error_callback, hsv=False):
         try:
-            # robot.driveToPuck([0,0,0,0])
             with picamera.PiCamera() as camera:
                 camera.resolution = (self.CAMERA_WIDTH, self.CAMERA_HEIGHT)
                 camera.framerate = 30
 
-                time.sleep(2)
+                time.sleep(1)
                 # Now fix the values
                 camera.shutter_speed = camera.exposure_speed
                 camera.exposure_mode = 'off'
@@ -151,95 +233,25 @@ class CameraVision(threading.Thread):
 
                 # capture into stream
                 stream = io.BytesIO()
-                for foo in camera.capture_continuous(stream, 'jpeg'):
+                for _ in camera.capture_continuous(stream, 'jpeg'):
                     last_time = time.time()
 
                     data = np.fromstring(stream.getvalue(), dtype=np.uint8)
                     # "Decode" the image from the array, preserving colour
                     image = cv2.imdecode(data, 1)
-
-                    # # Convert BGR to HSV
-                    # # image = cv2.GaussianBlur(image, (5, 5), 0)
-                    # hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-                    # # Resize image
-                    # hsv = cv2.resize(hsv, (len(image[0]) / self.scale_down, len(image) / self.scale_down))
-
-                    # Calculate value to divide the image into three/four different part
-                    valueDivision = math.floor((self.CAMERA_WIDTH / 3) / self.scale_down)
-                    valueDivisionVertical = math.floor((self.CAMERA_HEIGHT / 4) / self.scale_down)
-
-                    # Divide image in three pieces
-                    sub_image_left = image[0:valueDivisionVertical * 3, 0:0 + valueDivision]
-                    sub_image_central = image[0:valueDivisionVertical * 3,
-                                        valueDivision:valueDivision + valueDivision]
-                    sub_image_right = image[0:valueDivisionVertical * 3,
-                                      valueDivision + valueDivision: (self.CAMERA_WIDTH / self.scale_down)]
-                    sub_image_bottom = image[valueDivisionVertical * 3:]
-
-                    image_total = {"left": sub_image_left, "central": sub_image_central,
-                                   "right": sub_image_right, "bottom": sub_image_bottom}
-
-                    # # define range of blue color in HSV
-                    # lower_blue = np.array([80, 60, 50])
-                    # upper_blue = np.array([120, 255, 255])
-
-                    blue_lower_bgr = np.array([75, 0, 0])
-                    blue_upper_bgr = np.array([255, 75, 80])
-
-                    # define range of red color in HSV
-                    # My value
-                    red_lower = np.array([0, 100, 100], dtype="uint8")
-                    red_upper = np.array([15, 255, 255], dtype="uint8")
-
-                    #define range of red color in BGR
-                    red_lower_rgb = np.array([0, 0, 75], dtype="uint8")
-                    red_upper_rgb = np.array([90, 75, 255], dtype="uint8")
-
-                    # define range of green color in HSV
-                    green_lower = np.array([40, 75, 35])
-                    green_upper = np.array([55, 255, 255])
-
-                    #define range of green color in BGR
-                    green_lower_bgr = np.array([0, 75, 0])
-                    green_upper_bgr = np.array([60, 255, 80])
-
-                    # define range of white color in HSV
-                    test = 110
-                    lower_white = np.array([0, 0, 255 - test])
-                    upper_white = np.array([360, test, 255])
-
-                    # define range of black color in HSV
-                    black_lower = np.array([0, 0, 0])
-                    black_upper = np.array([180, 255, 30])
-
-                    self.presence = self.retContours(green_lower_bgr, green_upper_bgr, image_total, 0)
-
-                    # black color changed into blu color (thymio doesn't have blu part. Only goal is blu)
-                    self.presenceGoal = self.retContours(blue_lower_bgr, blue_upper_bgr, image_total, 1)
-
-                    # robot.updatePath({'puck': self.presence, 'target': self.presenceGoal})
-                    robot.avoidObstacle()
-
-                    # print("presencePuck {}".format(self.presence))
-                    # print("presenceGoal {}".format(self.presenceGoal))
-
-                    #check for the red color range
-                    # red_color_mask_rgb = cv2.inRange(image, red_lower_rgb, red_upper_rgb)
-                    # red_color_mask = cv2.inRange(hsv, red_lower, red_upper)
-
-                    #check for the green color range
-                    green_color_mask_bgr = cv2.inRange(image, green_lower_bgr, green_upper_bgr)
-                    blue_color_mask = cv2.inRange(image, blue_lower_bgr, blue_upper_bgr)
-
-                    if self.camera:
-                        cv2.imshow("ColourTrackerWindow", image)
-
-                    # cv2.imshow("hsv_image", hsv)
-                    # cv2.imshow("rgb_image", image)
+                    if hsv:
+                        hsvImage = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+                        hsvImage = cv2.resize(hsvImage, (len(image[0]) / self.scale_down, len(image) / self.scale_down))
+                        green_color_mask, blue_color_mask = self.run_hsv(hsvImage, callback)
+                        cv2.imshow("hsv_image", hsvImage)
+                    else:
+                        green_color_mask, blue_color_mask = self.run_bgr(image, callback)
+                    #     cv2.imshow("rgb_image", image)
+                    #
                     # cv2.imshow("blue_color_mask", blue_color_mask)
-                    # # cv2.imshow("red_color_mask_rgb", red_color_mask_rgb)
-                    # cv2.imshow("green_color_mask_rgb", green_color_mask_bgr)
-                    # cv2.waitKey(20)
+                    # cv2.imshow("green_color_mask", green_color_mask)
+                    #
+                    # cv2.waitKey(5)
 
                     stream.truncate()
                     stream.seek(0)
@@ -248,18 +260,21 @@ class CameraVision(threading.Thread):
                     if self._stopped():
                         self.__simLogger.debug("Stopping camera thread")
                         break
-                    print "time left:", (time.time() - last_time)
+
+                    # sleep if processing of camera image was faster than minimum frames per second
                     sleep_time = float(MIN_FPS - (time.time() - last_time))
-                    if(sleep_time > 0):
-                        time.sleep(float(MIN_FPS - (time.time() - last_time)))
+                    print "sleep time: ", sleep_time
+                    if sleep_time > 0:
+                        time.sleep(sleep_time)
+
             cv2.destroyAllWindows()
         except Exception as e:
-            robot.stop()
+            error_callback()
             print "Error: ", str(e), str(sys.exc_info()[0]) + ' - ' + traceback.format_exc()
             # self.__simLogger.critical("Camera exception: " + str(e) + str(
             #     sys.exc_info()[0]) + ' - ' + traceback.format_exc())
         except (KeyboardInterrupt, SystemExit):
-            robot.stop()
+            error_callback()
             raise
 
 
@@ -323,7 +338,7 @@ class CameraVisionVectors(CameraVision):
 
     def img_to_vector(self, binary, check_puck=False):
         # if not check_puck:
-        #    pickle.dump(binary, open('binary.p', 'wb'))
+        # pickle.dump(binary, open('binary.p', 'wb'))
         #    import sys
         #    print 'Exiting...'
         #    sys.exit(0)
@@ -387,6 +402,7 @@ class CameraVisionVectors(CameraVision):
         except Exception as e:
             print("Camera exception: " + str(e) + str(
                 sys.exc_info()[0]) + ' - ' + traceback.format_exc())
+
 
 if __name__ == "__main__":
     camera_vision = CameraVision(False, None)

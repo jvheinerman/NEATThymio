@@ -2,7 +2,7 @@
 
 from helpers import *
 from parameters import *
-from neat_task import NEATTask
+# from neat_task import NEATTask
 from CameraVision import *
 import classes as cl
 from peas.networks.rnn import NeuralNetwork
@@ -65,7 +65,6 @@ class ObstacleAvoidance(TaskEvaluator):
             psValues[0:5] = [(float(x) - float(pr.SENSOR_MAX[0]/2))/float(pr.SENSOR_MAX[0]/2) for x in psValues[0:5]]
             left, right = list(NeuralNetwork(evaluee).feed(psValues)[-2:])
             motorspeed = { 'left': left, 'right': right }
-
             try:
                 writeMotorSpeed(self.thymioController, motorspeed)
             except Exception as e:
