@@ -15,9 +15,9 @@ CURRENT_FILE_PATH = os.path.abspath(os.path.dirname(__file__))
 AESL_PATH = os.path.join(CURRENT_FILE_PATH, 'asebaCommands.aesl')
 MAX_MOTOR_SPEED = 250
 MAX_PRESENCE = 3000
-STOP_CONDITION = MAX_PRESENCE * 0.35/4
+STOP_CONDITION = MAX_PRESENCE * 0.55/4
 MAX_PRESENCE_TARGET = 18000
-STOP_CONDITION_TARGET = MAX_PRESENCE_TARGET * 1
+STOP_CONDITION_TARGET = MAX_PRESENCE_TARGET * 2
 BASE_SPEED = 0.7
 ADAPTIVITY = 0.4
 
@@ -69,7 +69,7 @@ class Robot():
     def search(self):
         self.avoidObstacle()
         # self.searching = True
-        self.motorspeed['left'] = BASE_SPEED*0.4
+        self.motorspeed['left'] = BASE_SPEED*0.7
         self.motorspeed['right'] = 0
         self.writeMotorSpeed(self.motorspeed)
 
@@ -124,7 +124,6 @@ class Robot():
             print " Error while reading proximity sensors: ", error
 
     def avoidObstacle(self):
-        print "reason to avoid: ", self.psValues
         while abs(sum(self.psValues[0:3])) >= 100:
             pos = maxItemIndex(self.psValues[0:3])
             if pos == 0:
@@ -216,8 +215,6 @@ if __name__ == "__main__":
 
     controller = dbus.Interface(bus.get_object('ch.epfl.mobots.Aseba', '/'), dbus_interface='ch.epfl.mobots.AsebaNetwork')
     controller.LoadScripts(AESL_PATH, reply_handler=dbusReply, error_handler=dbusError)
-
-    print controller.GetNodesList()
 
     loop = gobject.MainLoop()
 

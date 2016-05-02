@@ -10,6 +10,7 @@ import time
 import cv2
 
 import picamera
+from picamera.array import PiRGBArray
 
 from parameters import MIN_FPS, MIN_GOAL_DIST
 
@@ -165,8 +166,8 @@ class CameraVision(threading.Thread):
         # combine the presence of lighter and darker color ranges for closer and more distant objects
         self.presence = self.retContours(green_lower_bgr, green_upper_bgr, image_total, 1)
         prescenceDark = self.retContours(green_lower_dark_bgr, green_upper_dark_bgr, image_total, 1)
-        presenceLight = self.retContours(green_lower_light_bgr, green_upper_light_bgr, image_total,1)
-        presenceSuperlight = self.retContours(green_lower_superlight_bgr, green_upper_superlight_bgr, image_total,1)
+        presenceLight = self.retContours(green_lower_light_bgr, green_upper_light_bgr, image_total, 1)
+        presenceSuperlight = self.retContours(green_lower_superlight_bgr, green_upper_superlight_bgr, image_total, 1)
         self.presence = ((np.array(self.presence) + np.array(prescenceDark) + np.array(presenceLight) +
                           np.array(presenceSuperlight)) / 4).tolist()
         self.presenceGoal = self.retContours(blue_lower_bgr, blue_upper_bgr, image_total, 1)
@@ -221,24 +222,25 @@ class CameraVision(threading.Thread):
         try:
             with picamera.PiCamera() as camera:
                 camera.resolution = (self.CAMERA_WIDTH, self.CAMERA_HEIGHT)
-                camera.framerate = 30
+                camera.framerate = 32
+                rawCapture = PiRGBArray(camera, size=(self.CAMERA_WIDTH, self.CAMERA_HEIGHT))
 
-                time.sleep(1)
+                time.sleep(0.1)
                 # Now fix the values
-                camera.shutter_speed = camera.exposure_speed
-                camera.exposure_mode = 'off'
-                g = camera.awb_gains
-                camera.awb_mode = 'off'
-                camera.awb_gains = g
+                # camera.shutter_speed = camera.exposure_speed
+                # camera.exposure_mode = 'off'
+                # g = camera.awb_gains
+                # camera.awb_mode = 'off'
+                # camera.awb_gains = g
+
 
                 # capture into stream
-                stream = io.BytesIO()
-                for _ in camera.capture_continuous(stream, 'jpeg'):
+                # stream = io.BytesIO()
+                for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
                     last_time = time.time()
 
-                    data = np.fromstring(stream.getvalue(), dtype=np.uint8)
-                    # "Decode" the image from the array, preserving colour
-                    image = cv2.imdecode(data, 1)
+                    image = frame.array
+                    rawCapture.truncate(0)
                     if hsv:
                         hsvImage = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
                         hsvImage = cv2.resize(hsvImage, (len(image[0]) / self.scale_down, len(image) / self.scale_down))
@@ -246,15 +248,13 @@ class CameraVision(threading.Thread):
                         cv2.imshow("hsv_image", hsvImage)
                     else:
                         green_color_mask, blue_color_mask = self.run_bgr(image, callback)
-                    #     cv2.imshow("rgb_image", image)
-                    #
+                        # cv2.imshow("rgb_image", image)
+
                     # cv2.imshow("blue_color_mask", blue_color_mask)
                     # cv2.imshow("green_color_mask", green_color_mask)
-                    #
-                    # cv2.waitKey(5)
 
-                    stream.truncate()
-                    stream.seek(0)
+                    # cv2.waitKey(1)
+
 
                     # stop thread
                     if self._stopped():
@@ -266,7 +266,6 @@ class CameraVision(threading.Thread):
                     print "sleep time: ", sleep_time
                     if sleep_time > 0:
                         time.sleep(sleep_time)
-
             cv2.destroyAllWindows()
         except Exception as e:
             error_callback()

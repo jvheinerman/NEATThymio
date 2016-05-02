@@ -44,8 +44,10 @@ AESL_PATH = os.path.join(CURRENT_FILE_PATH, 'asebaCommands.aesl')
 
 class ForagingTask(TaskEvaluator):
 
-    def __init__(self, thymioController, commit_sha, debug=False, experimentName='NEAT_task', evaluations=1000, timeStep=0.005, activationFunction='tanh', popSize=1, generations=100, solvedAt=1000):
-        TaskEvaluator.__init__(self, thymioController, commit_sha, debug, experimentName, evaluations, timeStep, activationFunction, popSize, generations, solvedAt)
+    def __init__(self, thymioController, commit_sha, debug=False, experimentName='NEAT_task', evaluations=1000,
+                 timeStep=0.005, activationFunction='tanh', popSize=1, generations=100, solvedAt=1000):
+        TaskEvaluator.__init__(self, thymioController, commit_sha, debug, experimentName, evaluations, timeStep,
+                               activationFunction, popSize, generations, solvedAt)
         self.camera = CameraVisionVectors(False, self.logger)
         self.ctrl_thread_started = False
         self.img_thread_started = False
