@@ -48,7 +48,7 @@ class TaskEvaluator:
             if task.evaluations_taken == self.evaluations:
                 stopThymio(self.thymioController)
                 task.loop.quit()
-                return False 
+                return False
             ret_value =  self._step(evaluee, lambda (fit): update_fitness(self, fit))
             task.evaluations_taken += 1
             # time.sleep(TIME_STEP)

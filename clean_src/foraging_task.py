@@ -163,7 +163,7 @@ class ForagingTask(TaskEvaluator):
                     print 'Time exhausted'
 
                 return False
-            ret_value =  task._step(evaluee, lambda (energy): update_energy(task, energy))
+            ret_value = task._step(evaluee, lambda (energy): update_energy(task, energy))
             task.evaluations_taken += 1
             task.energy -= ENERGY_DECAY
             # time.sleep(TIME_STEP)

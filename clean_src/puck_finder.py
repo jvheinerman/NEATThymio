@@ -9,7 +9,7 @@ import time
 import csv
 import itertools
 from optparse import OptionParser
-from cameravision import CameraVision
+from cameravision import *
 
 CURRENT_FILE_PATH = os.path.abspath(os.path.dirname(__file__))
 AESL_PATH = os.path.join(CURRENT_FILE_PATH, 'asebaCommands.aesl')
@@ -222,8 +222,9 @@ if __name__ == "__main__":
     logger = Logger()
 
     def cameracallback(presence, image=None):
-        print "callback"
-        robot.updatePath(presence, logger, image)
+        print "callback: ", presence
+        # time.sleep(0.0001)
+        # robot.updatePath(presence, logger, image)
 
     def cameraErrorCallback():
         robot.stop()
@@ -231,5 +232,5 @@ if __name__ == "__main__":
         logger.writeFile()
 
     cameravision = CameraVision(False, None)
-    cameravision.run(cameracallback, cameraErrorCallback, hsv=False)
+    cameravision.start_camera(cameracallback, cameraErrorCallback, False)
 
