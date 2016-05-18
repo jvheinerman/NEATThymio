@@ -334,8 +334,12 @@ class CameraVisionVectors(CameraVision):
         # print('Found distance: ' + str(dist) + ' and angle: ' + str(angle))
         return dist, angle
 
-    def goal_reached(self, box_dist, goal_dist, MIN_GOAL_DIST=100):
+    def goal_reached(self, box_dist, goal_dist, MIN_GOAL_DIST=50):
         return goal_dist <= MIN_GOAL_DIST and box_dist == 0
+
+    def force_update_callback(self, callback):
+        self.callback_lock.release()
+        self.update_callback(callback)
 
     def run(self):
         try:

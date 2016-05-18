@@ -80,6 +80,7 @@ class ForagingTask(TaskEvaluator):
             #inputs consist of:
             #   2 values for distance and angle of the puck
             #   2 values for distance and angle of the target
+            #
             #   boolean whether robot currently has the puck
             #   a constant value of 1 (bias)
 
