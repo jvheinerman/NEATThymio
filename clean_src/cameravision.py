@@ -25,7 +25,7 @@ class CameraVision(threading.Thread):
         self.__isCameraAlive = threading.Condition()
         self.__isStopped = threading.Event()
         self.__simLogger = simulationLogger
-        self.__imageAreaThreshold = 650
+        self.__imageAreaThreshold = 750
         loaded_dist_angles = pickle.load(open("distances.p"))
         self.distances = loaded_dist_angles['distances']
         self.angles = loaded_dist_angles['angles']
@@ -71,8 +71,8 @@ class CameraVision(threading.Thread):
     def readGoalPresence(self):
         return self.presenceGoal
 
-    def goal_reached(self, box_dist, goal_dist, MIN_GOAL_DIST=100):
-        return goal_dist <= MIN_GOAL_DIST and box_dist == 0
+    def goal_reached(self, box_dist, goal_dist, max_goal_dist):
+        return goal_dist <= max_goal_dist and box_dist
 
     # return contours with largest area in the image
     def retMaxArea(self, contours):
@@ -246,7 +246,7 @@ class CameraVision(threading.Thread):
                 # Now fix the values
                 camera.shutter_speed = camera.exposure_speed
                 camera.exposure_mode = 'off'
-                g = camera.awb_gains
+                g = camera.awb_gains #TODO: make this fixed?
                 camera.awb_mode = 'off'
                 camera.awb_gains = g
 
@@ -333,9 +333,6 @@ class CameraVisionVectors(CameraVision):
 
         # print('Found distance: ' + str(dist) + ' and angle: ' + str(angle))
         return dist, angle
-
-    def goal_reached(self, box_dist, goal_dist, MIN_GOAL_DIST=50):
-        return goal_dist <= MIN_GOAL_DIST and box_dist == 0
 
     def force_update_callback(self, callback):
         self.callback_lock.release()

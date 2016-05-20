@@ -17,6 +17,8 @@ import time
 import sys
 import socket
 import thread
+import cv2
+import math
 
 EVALUATIONS = 1000
 MAX_MOTOR_SPEED = 150
@@ -24,9 +26,7 @@ TIME_STEP = 0.005
 ACTIVATION_FUNC = 'tanh'
 POPSIZE = 20
 GENERATIONS = 100
-
-#could be lower
-TARGET_SPECIES = 8
+TARGET_SPECIES = 3
 SOLVED_AT = EVALUATIONS * 2
 EXPERIMENT_NAME = 'NEAT_foraging_task'
 
@@ -40,17 +40,16 @@ PUCK_BONUS_SCALE = 0.67
 GOAL_BONUS_SCALE = 0.67
 GOAL_REACHED_BONUS = INITIAL_ENERGY
 BACKWARD_PUNISH_SCALE = 10
-ANGLE_PENALTY = 15
+ANGLE_PENALTY = 30
 
 CURRENT_FILE_PATH = os.path.abspath(os.path.dirname(__file__))
 AESL_PATH = os.path.join(CURRENT_FILE_PATH, 'asebaCommands.aesl')
 
 class ForagingTask(TaskEvaluator):
 
-    def __init__(self, thymioController, commit_sha, debug=False, experimentName='NEAT_task', evaluations=1000,
-                 timeStep=0.005, activationFunction='tanh', popSize=1, generations=100, solvedAt=1000):
-        TaskEvaluator.__init__(self, thymioController, commit_sha, debug, experimentName, evaluations, timeStep,
-                               activationFunction, popSize, generations, solvedAt)
+    def __init__(self, thymioController, commit_sha, debug=False):
+        TaskEvaluator.__init__(self, thymioController, commit_sha, debug, EXPERIMENT_NAME, EVALUATIONS, TIME_STEP,
+                               ACTIVATION_FUNC, POPSIZE, GENERATIONS, SOLVED_AT)
         self.camera = CameraVisionVectors(False, self.logger)
         self.ctrl_thread_started = False
         self.img_thread_started = False
@@ -65,17 +64,20 @@ class ForagingTask(TaskEvaluator):
         self.proxvalues = [-1, -1]
         self.goalReached = False
         self.puckRemoved = False
+        self.hasPuck = False
+        self.puckLostCounter = 0
+        self.goalReachedCounter = 0
 
     """
-        The _step function will only be called when the values from the camera are ready to be consumed. they will not
-        be called from the main thread and therefor require locking of resources which could possibly be used by the
+        The _step function will only be called when the values from the camera are ready to be consumed. It will not
+        be called from the main thread and therefore requires locking of resources which could possibly be used by the
         main thread, like the thymio controller.
     """
     def _step(self, evaluee, callback):
 
         self.motorLock.acquire()
         getProxReadings(self.thymioController, self.prox_readings_ok_call, self.prox_readings_nok_call)
-        time.sleep(0.17)
+        time.sleep(0.25)
         self.motorLock.release()
 
         presence_box = self.presenceValues["puck"]
@@ -94,8 +96,8 @@ class ForagingTask(TaskEvaluator):
             #   boolean whether robot currently has the puck
             #   a constant value of 1 (bias)
 
-            inputs = np.hstack(([x if not x == -np.inf else -10000 for x in self.presence], has_box, 1))
-            inputs[::2] = inputs[::2] / self.camera.MAX_DISTANCE
+            inputs = np.hstack(([x if not x == -np.inf else -self.camera.MAX_DISTANCE for x in self.presence], has_box, 1))
+            inputs[::2] = map(lambda dist: dist/float(self.camera.MAX_DISTANCE), inputs[::2])
             inputs = np.concatenate((inputs, self.proxvalues), 0)
 
 
@@ -119,20 +121,31 @@ class ForagingTask(TaskEvaluator):
         print "Error reading proximity values"
 
     def getFitness(self):
-        return max(self.evaluations_taken + self.energy, 1)
+        print "evaluations taken ", self.evaluations_taken, " energy: ", self.energy
+        energy_norm = math.tanh(self.energy)
+        return max(self.evaluations_taken + energy_norm, 1)
 
     def getEnergyDelta2(self):
+        global img_client
+        if img_client and self.camera.binary_channels is not None:
+            send_image(img_client, self.camera.binary_channels, self.energy,
+                       self.presence[0], self.presence[2])
+
         self.presence = [x if not x == -np.inf else self.camera.MAX_DISTANCE for x in self.presence]
         self.prev_presence = [x if not x == -np.inf else self.camera.MAX_DISTANCE for x in self.prev_presence]
 
         if None in self.presence or None in self.prev_presence:
             return 0
 
-        prox_penalty_front = (self.proxvalues[0] + 1) * 2.5
-        prox_penalty_back = (self.proxvalues[1] + 1) * 7.5
+        prox_penalty_front = (self.proxvalues[0] + 1) * 20
+        prox_penalty_back = (self.proxvalues[1] + 1) * 10
 
         if self.presence[0] != 0:
+            #use prev angle in calculation: 1 -> minimal influence distance, 0 -> maximum influence distance
             angle_puck_diff = abs(self.presence[1]) - abs(self.prev_presence[1])
+            if angle_puck_diff > 0:
+                angle_puck_diff *= 3
+            # print "Angle penalty: ", angle_puck_diff * ANGLE_PENALTY
             energy_delta = PUCK_BONUS_SCALE * (self.prev_presence[0] - self.presence[0]) - ANGLE_PENALTY * angle_puck_diff
         else:
             angle_puck_diff = abs(self.presence[3]) - abs(self.prev_presence[3])
@@ -140,15 +153,26 @@ class ForagingTask(TaskEvaluator):
 
         energy_delta = energy_delta - prox_penalty_front - prox_penalty_back
 
-        if self.camera.goal_reached(self.presence[0], self.presence[2], MIN_GOAL_DIST):
-            self.goalReached = True
-            self.conditionLock.acquire()
-            self.presenceValuesReady = True
-            self.conditionLock.notify()
-            self.conditionLock.release()
-            energy_delta = GOAL_REACHED_BONUS
+        if self.presence[0] == 0:
+            self.puckLostCounter = 0
+            self.hasPuck = True
+        else:
+            self.puckLostCounter += 1
+            if self.puckLostCounter == 5:
+                self.hasPuck = False
 
-        print "Energy delta: ", energy_delta, " has puck: ", self.presence[0] == 0, \
+        if self.camera.goal_reached(self.hasPuck, self.presence[2], MIN_GOAL_DIST):
+            self.goalReachedCounter += 1
+            if self.goalReachedCounter == 3:
+                self.goalReached = True
+                self.conditionLock.acquire()
+                self.presenceValuesReady = True
+                self.conditionLock.notify()
+                self.conditionLock.release()
+                self.hasPuck = False
+                energy_delta = GOAL_REACHED_BONUS
+
+        print "Energy delta: ", energy_delta, " has puck: ", self.hasPuck, \
             " presence goal: ", self.presence[2], " presence puck: ", self.presence[0], \
             " prox penalties: ", [prox_penalty_front, prox_penalty_back]
 
@@ -172,9 +196,11 @@ class ForagingTask(TaskEvaluator):
     """
     def getEnergyDelta(self):
         global img_client
-        if img_client and not self.camera.binary_channels is None:
+        if img_client and self.camera.binary_channels is not None:
             send_image(img_client, self.camera.binary_channels, self.energy,
                        self.presence[0], self.presence[2])
+        else:
+            print "could not send image: ", self.camera.binary_channels
 
         speedpenalty = 0
         if self.motorspeed['left'] < 0 and self.motorspeed['right'] < 0:
@@ -295,7 +321,6 @@ class ForagingTask(TaskEvaluator):
                 self.camera.update_callback(self.goal_reach_camera_callback)
 
                 self.conditionGoalReached.acquire()
-                print "acquired lock"
                 self.puckRemoved = False
                 while not self.puckRemoved:
                     self.thymioController.SendEventName('PlayFreq', [700, 0], reply_handler=dbusReply, error_handler=dbusError)
@@ -305,6 +330,8 @@ class ForagingTask(TaskEvaluator):
                 self.conditionGoalReached.release()
                 print "finished puck wait loop"
                 self.goalReached = False
+                self.prev_presence = list(self.prev_presence)
+                self.prev_presence[0] = self.prev_presence[2] = self.camera.MAX_DISTANCE
                 time.sleep(1)
 
             if not self.camera.isAlive():
@@ -375,6 +402,7 @@ def write_header(client, boundary='thymio'):
                 "boundary=" + boundary + "\r\n" +
                 "\r\n" +
                 "--" + boundary + "\r\n")
+
 
 def send_image(client, binary_channels, energy, box_dist, goal_dist, boundary='thymio'):
     red = np.zeros(binary_channels[0].shape, np.uint8)
@@ -448,7 +476,7 @@ if __name__ == '__main__':
 
     debug = True
     commit_sha = sys.argv[-1]
-    task = ForagingTask(thymioController, commit_sha, debug, EXPERIMENT_NAME)
+    task = ForagingTask(thymioController, commit_sha, debug)
 
     ctrl_serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     ctrl_serversocket.bind((sys.argv[-2], 1337))
@@ -467,7 +495,7 @@ if __name__ == '__main__':
     img_client = None
     def set_img_client():
         global img_client
-        print 'Image server: waiting for socket connections...'
+        print 'Image server: waiting for socket connections.'
         (img_client, address) = img_serversocket.accept()
         print 'Image server: got connection from', address
         write_header(img_client)
