@@ -305,7 +305,9 @@ class CameraVisionVectors(CameraVision):
             return -np.inf, 0
 
         central_index = binary.shape[1] / 2
-        if check_puck and np.all(binary[-1, (central_index - 1):(central_index + 1)]):
+        if check_puck and (np.all(binary[-1, (central_index - 1):(central_index + 1)]) or
+                np.all(binary[-1, (central_index/2 - 1):(central_index/2 + 1)]) or
+                np.all(binary[-1, (central_index + central_index/2 - 1):(central_index + central_index/2 + 1)])):
             return 0, 0
 
         distances_copy = self.distances.copy()
@@ -331,7 +333,6 @@ class CameraVisionVectors(CameraVision):
 
         dist, angle = self.find_shortest(binary, check_puck=check_puck)
 
-        # print('Found distance: ' + str(dist) + ' and angle: ' + str(angle))
         return dist, angle
 
     def force_update_callback(self, callback):

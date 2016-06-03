@@ -6,6 +6,7 @@ from cameravision import *
 import classes as cl
 from peas.networks.rnn import NeuralNetwork
 from threading import Condition, Lock
+from socket import error as socket_error
 
 import gobject
 import glib
@@ -36,8 +37,8 @@ ENERGY_DECAY = 1
 MAX_STEPS = 500
 EXPECTED_FPS = 4
 
-PUCK_BONUS_SCALE = 0.67
-GOAL_BONUS_SCALE = 0.67
+PUCK_BONUS_SCALE = 1
+GOAL_BONUS_SCALE = 1
 GOAL_REACHED_BONUS = INITIAL_ENERGY
 BACKWARD_PUNISH_SCALE = 10
 ANGLE_PENALTY = 30
@@ -77,7 +78,7 @@ class ForagingTask(TaskEvaluator):
 
         self.motorLock.acquire()
         getProxReadings(self.thymioController, self.prox_readings_ok_call, self.prox_readings_nok_call)
-        time.sleep(0.25)
+        time.sleep(0.5)
         self.motorLock.release()
 
         presence_box = self.presenceValues["puck"]
@@ -128,8 +129,11 @@ class ForagingTask(TaskEvaluator):
     def getEnergyDelta2(self):
         global img_client
         if img_client and self.camera.binary_channels is not None:
-            send_image(img_client, self.camera.binary_channels, self.energy,
-                       self.presence[0], self.presence[2])
+            try:
+                send_image(img_client, self.camera.binary_channels, self.energy,
+                           self.presence[0], self.presence[2])
+            except socket_error:
+                print "could not send image"
 
         self.presence = [x if not x == -np.inf else self.camera.MAX_DISTANCE for x in self.presence]
         self.prev_presence = [x if not x == -np.inf else self.camera.MAX_DISTANCE for x in self.prev_presence]
@@ -140,31 +144,34 @@ class ForagingTask(TaskEvaluator):
         prox_penalty_front = (self.proxvalues[0] + 1) * 20
         prox_penalty_back = (self.proxvalues[1] + 1) * 10
 
-        if self.presence[0] != 0:
+        if self.hasPuck:
             #use prev angle in calculation: 1 -> minimal influence distance, 0 -> maximum influence distance
-            angle_puck_diff = abs(self.presence[1]) - abs(self.prev_presence[1])
-            if angle_puck_diff > 0:
-                angle_puck_diff *= 3
-            # print "Angle penalty: ", angle_puck_diff * ANGLE_PENALTY
-            energy_delta = PUCK_BONUS_SCALE * (self.prev_presence[0] - self.presence[0]) - ANGLE_PENALTY * angle_puck_diff
+            angle_puck_diff = abs(self.prev_presence[3]) - abs(self.presence[3])
+            if angle_puck_diff < 0:
+                angle_puck_diff *= 2
+            energy_delta = PUCK_BONUS_SCALE * (self.prev_presence[2] - self.presence[2]) + ANGLE_PENALTY * angle_puck_diff
         else:
-            angle_puck_diff = abs(self.presence[3]) - abs(self.prev_presence[3])
-            energy_delta = GOAL_BONUS_SCALE * (self.prev_presence[2] - self.presence[2]) - ANGLE_PENALTY * angle_puck_diff
+            angle_puck_diff = abs(self.prev_presence[1]) - abs(self.presence[1])
+            if angle_puck_diff < 0:
+                angle_puck_diff *= 2
+            energy_delta = GOAL_BONUS_SCALE * (self.prev_presence[0] - self.presence[0]) + ANGLE_PENALTY * angle_puck_diff
 
         energy_delta = energy_delta - prox_penalty_front - prox_penalty_back
 
         if self.presence[0] == 0:
             self.puckLostCounter = 0
             self.hasPuck = True
-        else:
+        elif self.hasPuck:
             self.puckLostCounter += 1
-            if self.puckLostCounter == 5:
+            if self.puckLostCounter == 10:
+                self.puckLostCounter = 0
                 self.hasPuck = False
 
         if self.camera.goal_reached(self.hasPuck, self.presence[2], MIN_GOAL_DIST):
             self.goalReachedCounter += 1
-            if self.goalReachedCounter == 3:
+            if self.goalReachedCounter == 5:
                 self.goalReached = True
+                self.goalReachedCounter = 0
                 self.conditionLock.acquire()
                 self.presenceValuesReady = True
                 self.conditionLock.notify()
@@ -331,8 +338,10 @@ class ForagingTask(TaskEvaluator):
                 print "finished puck wait loop"
                 self.goalReached = False
                 self.prev_presence = list(self.prev_presence)
-                self.prev_presence[0] = self.prev_presence[2] = self.camera.MAX_DISTANCE
+                if len(self.prev_presence) >= 3:
+                    self.prev_presence[0] = self.prev_presence[2] = self.camera.MAX_DISTANCE
                 time.sleep(1)
+
 
             if not self.camera.isAlive():
                 print "starting camera"
