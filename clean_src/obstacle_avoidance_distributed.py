@@ -123,6 +123,7 @@ def release_resources(thymio):
 
 if __name__ == '__main__':
     from peas.methods.odneat import NEATPopulation, NEATGenotype
+    ctrl_ip = sys.argv[-2]
     genotype = lambda: NEATGenotype(
         inputs=6, outputs=2,
         types=[ACTIVATION_FUNC],
@@ -131,7 +132,10 @@ if __name__ == '__main__':
         stdev_mutate_weight=.25,
         stdev_mutate_bias=.25,
         stdev_mutate_response=.25)
-    pop = NEATPopulation(genotype, popsize=POPSIZE, target_species=TARGET_SPECIES)
+    pop = NEATPopulation(ctrl_ip, genotype, popsize=POPSIZE, target_species=TARGET_SPECIES)
+
+    with open("what_is_my_ip.txt", "w") as f:
+        f.write("My ip: "  + ctrl_ip)
 
     # log neat settings
     log = { 'neat': {}, 'generations': [] }
@@ -173,7 +177,6 @@ if __name__ == '__main__':
     task = ObstacleAvoidance(thymioController, commit_sha, debug, EXPERIMENT_NAME)
 
     ctrl_serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    ctrl_ip = sys.argv[-2]
     ctrl_serversocket.bind((ctrl_ip, 1337))
     ctrl_serversocket.listen(5)
     ctrl_client = None
