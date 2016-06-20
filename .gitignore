@@ -59,6 +59,7 @@ target/
 # IDE
 .idea
 */.DS_Store
+./.DS_Store
 
 distances.p
 srv_resources
