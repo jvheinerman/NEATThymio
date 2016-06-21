@@ -65,7 +65,7 @@ class ForagingTask(TaskEvaluator):
         self.proxvalues = [-1, -1]
         self.goalReached = False
         self.puckRemoved = False
-        self.hasPuck = True
+        self.hasPuck = False
         self.puckLostCounter = 0
         self.goalReachedWaiter = 0
         self.goalReachedCounter = 0
@@ -151,38 +151,39 @@ class ForagingTask(TaskEvaluator):
 
         if self.hasPuck:
             #use prev angle in calculation: 1 -> minimal influence distance, 0 -> maximum influence distance
+
             angle_goal_diff = abs(self.prev_presence[3]) - abs(self.presence[3])
             delta_goal_distance = (abs(self.prev_presence[2]) - abs(self.presence[2]))
-
-            # if angle_goal_diff < 0:
-            #     angle_goal_diff *= 2
-            # if delta_goal_distance > 40 :
-            #     delta_goal_distance = 10
-            # elif delta_goal_distance < -10:
-            #         delta_goal_distance = -10
-
-            if (abs(angle_goal_diff)) < 0.1 and 2 < delta_goal_distance < 60:
+            if abs(delta_goal_distance) > 60:
                 delta_goal_distance = 10
-                angle_goal_diff = 5
-                prox_penalty_back = prox_penalty_front = 0
-            elif (abs(angle_goal_diff)) < 0.1 and delta_goal_distance > 60:
-                delta_goal_distance *= 0.2
-                prox_penalty_back = prox_penalty_front = 0
-            elif 0 < delta_goal_distance < 2:
-                delta_goal_distance = 0
-                angle_goal_diff = 0
-            else:
-                delta_goal_distance = -1
-                angle_goal_diff = -1
+
+
+            # if (abs(angle_goal_diff)) < 0.1 and 2 < delta_goal_distance < 60:
+            #     delta_goal_distance = 10
+            #     angle_goal_diff = 5
+            #     prox_penalty_back = prox_penalty_front = 0
+            # elif (abs(angle_goal_diff)) < 0.1 and delta_goal_distance > 60:
+            #     delta_goal_distance *= 0.2
+            #     prox_penalty_back = prox_penalty_front = 0
+            # elif 0 < delta_goal_distance < 2:
+            #     delta_goal_distance = 0
+            #     angle_goal_diff = 0
+            # else:
+            #     delta_goal_distance = -1
+            #     angle_goal_diff = -1
 
 
             energy_delta = GOAL_BONUS_SCALE * delta_goal_distance + ANGLE_PENALTY * angle_goal_diff
 
         else:
+            delta_puck_distance = (abs(self.prev_presence[0]) - abs(self.presence[0]))
             angle_puck_diff = abs(self.prev_presence[1]) - abs(self.presence[1])
+
+            if abs(delta_puck_distance) > 60:
+                delta_puck_distance = 10
             if angle_puck_diff < 0:
                 angle_puck_diff *= 2
-            energy_delta = PUCK_BONUS_SCALE * (self.prev_presence[0] - self.presence[0]) + ANGLE_PENALTY * angle_puck_diff
+            energy_delta = PUCK_BONUS_SCALE * delta_puck_distance + ANGLE_PENALTY * angle_puck_diff
 
         # print "Goal Distance Bonuns:", (GOAL_BONUS_SCALE * delta_goal_distance), "Goal Angle Bonus: ", (ANGLE_PENALTY * angle_goal_diff)
         # print "self.presence 0:", self.presence[0]
@@ -200,7 +201,9 @@ class ForagingTask(TaskEvaluator):
             self.puckLostCounter += 1
             if self.puckLostCounter == 10:
                 self.puckLostCounter = 0
-                self.hasPuck = True
+                self.hasPuck = False
+        else:
+            self.hasPuck = False
 
         if self.camera.goal_reached(self.hasPuck, self.presence[2], MIN_GOAL_DIST):
             self.bools[self.boolCounter] = False
@@ -213,10 +216,10 @@ class ForagingTask(TaskEvaluator):
             self.checkForGoal()
 
         elif all(self.bools):
-            self.goalReachedCounter = 0
+            self.goalReachedWaiter = 0
 
 
-        print "E delta: %.2f\t" % energy_delta, "P goal: %.2f\t" % self.presence[2], "P puck: %.2f\t" %self.presence[0], "Puck: \t", self.hasPuck
+        print "E delta: %.2f\t" % energy_delta, "P goal: %.2f\t" % self.presence[2], "P puck: %.2f\t" %self.presence[0], "Puck: \t", self.hasPuck, "Goals: \t", self.goalReachedCounter
 
         #" prox penalties: ", [prox_penalty_front, prox_penalty_back], " goals reached", self.goalReachedCounter
 
@@ -233,7 +236,7 @@ class ForagingTask(TaskEvaluator):
             self.presenceValuesReady = True
             self.conditionLock.notify()
             self.conditionLock.release()
-            self.hasPuck = True
+            self.hasPuck = False
             energy_delta = GOAL_REACHED_BONUS
 
     def goal_reach_camera_callback(self, presence):
@@ -381,14 +384,14 @@ class ForagingTask(TaskEvaluator):
 
                 self.conditionGoalReached.acquire()
                 self.puckRemoved = False
-                # while not self.puckRemoved:
-                self.thymioController.SendEventName('PlayFreq', [700, 0], reply_handler=dbusReply, error_handler=dbusError)
-                time.sleep(.3)
-                self.thymioController.SendEventName('PlayFreq', [0, -1], reply_handler=dbusReply, error_handler=dbusError)
-                #self.conditionGoalReached.wait(0.7)
-                time.sleep(10)
+                while not self.puckRemoved:
+                    self.thymioController.SendEventName('PlayFreq', [700, 0], reply_handler=dbusReply, error_handler=dbusError)
+                    time.sleep(.3)
+                    self.thymioController.SendEventName('PlayFreq', [0, -1], reply_handler=dbusReply, error_handler=dbusError)
+                    self.conditionGoalReached.wait(0.7)
 
                 self.conditionGoalReached.release()
+                time.sleep(1)
                 print "finished puck wait loop"
                 self.goalReached = False
                 self.prev_presence = list(self.prev_presence)
