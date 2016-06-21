@@ -76,4 +76,3 @@ article.ps
 
 # files subject to a lot of local change
 clean_src/bots.txt
-clean_src/parameters.py

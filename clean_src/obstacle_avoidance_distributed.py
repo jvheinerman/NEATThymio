@@ -52,7 +52,6 @@ class ObstacleAvoidance(TaskEvaluator):
 
     def evaluate(self, evaluee):
         global ctrl_client
-        print "thread started:", self.ctrl_thread_started
         if ctrl_client and not self.ctrl_thread_started:
             thread.start_new_thread(check_stop, (self, ))
             self.ctrl_thread_started = True
