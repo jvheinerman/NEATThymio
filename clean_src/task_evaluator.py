@@ -26,7 +26,8 @@ class TaskEvaluator:
         #simHandler.setFormatter(FORMATTER)
         #self.logger.addHandler(simHandler)
 
-        self.jsonLogFilename = os.path.join(outputDir, experimentName + '_' + commit_sha + '.json')
+        date = time.strftime("%d-%m-%y_%H-%M")
+        self.jsonLogFilename = os.path.join(outputDir, experimentName + '_' + date + '.json')
 
         self.evaluations = evaluations
         self.timeStep = timeStep
