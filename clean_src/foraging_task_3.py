@@ -69,8 +69,6 @@ class ForagingTask(TaskEvaluator):
         self.puckLostCounter = 0
         self.goalReachedWaiter = 0
         self.goalReachedCounter = 0
-        self.bools = [True]*3
-        self.boolCounter = 0
 
     """
         The _step function will only be called when the values from the camera are ready to be consumed. It will not
@@ -207,17 +205,12 @@ class ForagingTask(TaskEvaluator):
 
         if self.hasPuck:
             if self.camera.goal_reached(self.hasPuck, self.presence[2], MIN_GOAL_DIST):
-                self.bools[self.boolCounter] = False
-                self.boolCounter += 1
                 self.goalReachedWaiter += 1
                 self.checkForGoal()
 
-            elif self.presence[2] < 60:
-                self.goalReachedWaiter = 3
-                self.checkForGoal()
-
-            elif all(self.bools):
-                self.goalReachedWaiter = 0
+            else:
+                if not self.goalReachedWaiter == 0:
+                    self.goalReachedWaiter -= 1
 
 
         print "E delta: %.2f\t" % energy_delta, "P goal: %.2f\t" % self.presence[2], "P puck: %.2f\t" %self.presence[0], "Puck: \t", self.hasPuck, "Goals: \t", self.goalReachedCounter
@@ -229,8 +222,6 @@ class ForagingTask(TaskEvaluator):
     def checkForGoal(self):
 
         if self.goalReachedWaiter == 3:
-            self.bools = [True] * 3
-            self.boolCounter = 0
             self.goalReached = True
             self.goalReachedWaiter = 0
             self.conditionLock.acquire()
