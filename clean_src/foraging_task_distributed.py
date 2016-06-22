@@ -29,12 +29,12 @@ POPSIZE = 10
 GENERATIONS = 100
 TARGET_SPECIES = 2
 SOLVED_AT = EVALUATIONS * 2
-EXPERIMENT_NAME = 'NEAT_foraging_task_distributed'
+EXPERIMENT_NAME = 'NEAT_foraging_task'
 
 INITIAL_ENERGY = 100
 MAX_ENERGY = 200
-ENERGY_DECAY = 1
-MAX_STEPS = 500
+ENERGY_DECAY = 5
+MAX_STEPS = 200
 EXPECTED_FPS = 4
 
 PUCK_BONUS_SCALE = 1
@@ -205,18 +205,19 @@ class ForagingTask(TaskEvaluator):
         else:
             self.hasPuck = False
 
-        if self.camera.goal_reached(self.hasPuck, self.presence[2], MIN_GOAL_DIST):
-            self.bools[self.boolCounter] = False
-            self.boolCounter += 1
-            self.goalReachedWaiter += 1
-            self.checkForGoal()
+        if self.hasPuck:
+            if self.camera.goal_reached(self.hasPuck, self.presence[2], MIN_GOAL_DIST):
+                self.bools[self.boolCounter] = False
+                self.boolCounter += 1
+                self.goalReachedWaiter += 1
+                self.checkForGoal()
 
-        elif self.presence[2] < 60:
-            self.goalReachedWaiter = 3
-            self.checkForGoal()
+            elif self.presence[2] < 60:
+                self.goalReachedWaiter = 3
+                self.checkForGoal()
 
-        elif all(self.bools):
-            self.goalReachedWaiter = 0
+            elif all(self.bools):
+                self.goalReachedWaiter = 0
 
 
         print "E delta: %.2f\t" % energy_delta, "P goal: %.2f\t" % self.presence[2], "P puck: %.2f\t" %self.presence[0], "Puck: \t", self.hasPuck, "Goals: \t", self.goalReachedCounter
@@ -240,7 +241,7 @@ class ForagingTask(TaskEvaluator):
             energy_delta = GOAL_REACHED_BONUS
 
     def goal_reach_camera_callback(self, presence):
-        #print "recieved the presence: ", presence
+        print("new presence values goal reached callback: ", presence)
         self.puckRemoved = presence["puck"][0] != 0
         if self.puckRemoved:
             self.conditionGoalReached.acquire()
@@ -251,66 +252,6 @@ class ForagingTask(TaskEvaluator):
         self.presenceValuesReady = True
         self.conditionLock.notify()
         self.conditionLock.release()
-
-    """
-        Calculate the difference in energy of the robot.
-    """
-    def getEnergyDelta(self):
-        global img_client
-        if img_client and self.camera.binary_channels is not None:
-            send_image(img_client, self.camera.binary_channels, self.energy,
-                       self.presence[0], self.presence[2])
-        else:
-            print "could not send image: ", self.camera.binary_channels
-        speedpenalty = 0
-        if self.motorspeed['left'] < 0 and self.motorspeed['right'] < 0:
-            speedpenalty = (self.motorspeed['left'] / float(MAX_MOTOR_SPEED)) * (self.motorspeed['right'] / MAX_MOTOR_SPEED)
-            speedpenalty = np.sqrt(speedpenalty) * BACKWARD_PUNISH_SCALE
-        # print "Speedpenalty backwards: ", speedpenalty
-
-        self.presence = [x if not x == -np.inf else self.camera.MAX_DISTANCE for x in self.presence]
-        self.prev_presence = [x if not x == -np.inf else self.camera.MAX_DISTANCE for x in self.prev_presence]
-
-        if None in self.presence or None in self.prev_presence:
-            return 0
-        if self.presence[0] == 0 and self.prev_presence[0] != 0:
-            self.getLogger().info(str(self.individuals_evaluated) + ' > Found puck')
-        elif self.presence[0] != 0 and self.prev_presence[0] == 0:
-            self.getLogger().info(str(self.individuals_evaluated) + ' > Lost puck')
-
-        energy_delta = speedpenalty + PUCK_BONUS_SCALE * (self.prev_presence[0] - self.presence[0])
-
-        if (self.prev_presence[0] - self.presence[0]) < -200:
-            print "extreme presence, prev: ", self.prev_presence, " current: ", self.presence
-
-        if self.presence[0] == 0:
-            energy_delta = speedpenalty + GOAL_BONUS_SCALE * (self.prev_presence[2] - self.presence[2])
-
-        if self.camera.goal_reached(self.presence[0], self.presence[2], MIN_GOAL_DIST):
-
-            print '===== Goal reached!'
-            print "Motorlock: " , self.motorLock.locked()
-            self.motorLock.acquire()
-            print "Stopping robot!"
-            stopThymio(self.thymioController)
-
-            while self.camera.readPuckPresence()[0] == 0:
-                self.thymioController.SendEventName('PlayFreq', [700, 0], reply_handler=dbusReply, error_handler=dbusError)
-                time.sleep(.3)
-                self.thymioController.SendEventName('PlayFreq', [0, -1], reply_handler=dbusReply, error_handler=dbusError)
-                time.sleep(.7)
-            self.motorLock.release()
-            time.sleep(1)
-
-            self.getLogger().info(str(self.individuals_evaluated) + ' > Goal reached')
-            energy_delta = GOAL_REACHED_BONUS
-
-    # if energy_delta: print('Energy delta %d' % energy_delta)
-
-
-        self.step_time = time.time()
-
-        return energy_delta
 
     def cameraCallback(self, evaluee, callback, presenceValues):
         #activate the main thread waiting for camera input
@@ -352,6 +293,7 @@ class ForagingTask(TaskEvaluator):
         self.loop = gobject.MainLoop()
         def update_energy(task, energy):
             task.energy += energy
+
         def main_lambda(task):
             if task.energy <= 0 or task.evaluations_taken >= MAX_STEPS:
                 task.motorLock.acquire()
@@ -368,7 +310,7 @@ class ForagingTask(TaskEvaluator):
 
             if not self.goalReached:
                 callback = lambda (psvalues): task.cameraCallback(evaluee, lambda (energy): update_energy(task, energy),
-                                                              psvalues)
+                                                                  psvalues)
             else:
                 callback = self.goal_reach_camera_callback
                 self.camera.update_callback(callback)
@@ -391,13 +333,13 @@ class ForagingTask(TaskEvaluator):
                     self.conditionGoalReached.wait(0.7)
 
                 self.conditionGoalReached.release()
-                time.sleep(1)
+                time.sleep(15)
                 print "finished puck wait loop"
                 self.goalReached = False
                 self.prev_presence = list(self.prev_presence)
                 if len(self.prev_presence) >= 3:
                     self.prev_presence[0] = self.prev_presence[2] = self.camera.MAX_DISTANCE
-                time.sleep(1)
+                time.sleep(2)
 
 
             if not self.camera.isAlive():
@@ -484,6 +426,7 @@ def send_image(client, binary_channels, energy, box_dist, goal_dist, boundary='t
 
 if __name__ == '__main__':
     from peas.methods.odneat import NEATPopulation, NEATGenotype
+    ctrl_ip = sys.argv[-2]
     genotype = lambda: NEATGenotype(
         inputs=8,
         outputs=2,
@@ -494,7 +437,7 @@ if __name__ == '__main__':
         stdev_mutate_bias=.25,
         stdev_mutate_response=.25)
         #feedforward=False)
-    pop = NEATPopulation(genotype, popsize=POPSIZE, target_species=TARGET_SPECIES, stagnation_age=5)
+    pop = NEATPopulation(ctrl_ip, genotype, popsize=POPSIZE, target_species=TARGET_SPECIES, stagnation_age=5)
 
     log = { 'neat': {}, 'generations': [] }
 

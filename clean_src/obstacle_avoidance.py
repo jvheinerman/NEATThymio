@@ -1,21 +1,12 @@
 # -*- coding: utf-8 -*-
 
-from helpers import *
 from parameters import *
 # from neat_task import NEATTask
-from CameraVision import *
-import classes as cl
-from peas.networks.rnn import NeuralNetwork
 
 import numpy as np
-import os
-import time
-import gobject
-import glib
 import dbus
 import dbus.mainloop.glib
 import logging
-import pickle
 import parameters as pr
 from helpers import *
 from task_evaluator import TaskEvaluator
@@ -48,6 +39,8 @@ class ObstacleAvoidance(TaskEvaluator):
     def __init__(self, thymioController, commit_sha, debug=False, experimentName=EXPERIMENT_NAME, evaluations=1000, timeStep=0.005, activationFunction='tanh', popSize=1, generations=100, solvedAt=1000):
         TaskEvaluator.__init__(self, thymioController, commit_sha, debug, experimentName, evaluations, timeStep, activationFunction, popSize, generations, solvedAt)
         self.ctrl_thread_started = False
+        self.hitWallCounter = 0
+        self.atWall = False
         print "New obstacle avoidance task"
 
     def evaluate(self, evaluee):
@@ -69,6 +62,12 @@ class ObstacleAvoidance(TaskEvaluator):
                 writeMotorSpeed(self.thymioController, motorspeed)
             except Exception as e:
                 print str(e)
+
+            if not self.atWall & SENSOR_MAX in psValues:
+                self.atWall = True
+                self.hitWallCounter += 1
+            elif SENSOR_MAX not in psValues:
+                self.atWall = False
 
             callback(self.getFitness(motorspeed, psValues))
 

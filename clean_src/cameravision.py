@@ -39,7 +39,7 @@ class CameraVision(threading.Thread):
 
         #define color ranges
 
-        self.blue_lower_bgr = np.array([40, 0, 0])
+        self.blue_lower_bgr = np.array([35, 0, 0])
         self.blue_upper_bgr = np.array([255, 60, 40])
 
         self.green_lower_bgr = np.array([0, 70, 0])
@@ -383,3 +383,14 @@ class CameraVisionVectors(CameraVision):
         except (KeyboardInterrupt, SystemExit):
             self.error_callback()
             raise
+
+if __name__ == "__main__":
+    cameravission = CameraVisionVectors(False, None)
+
+    def camera_callback(values):
+        print "new values: ", values
+
+    def camera_error(err):
+        print "error: ", err
+
+    cameravission.start_camera(camera_callback, camera_error)

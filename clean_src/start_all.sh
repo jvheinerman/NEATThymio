@@ -1,7 +1,13 @@
 #!/bin/bash
 
+if [ ! -z  $1 ]; then
+	BOTS=$1
+else
+	BOTS=./bots.txt
+fi
+
 #sync the clocks
-sh ./sync_all.sh;
+sh ./sync_all.sh $BOTS;
 
 while read line
 do
@@ -14,5 +20,5 @@ do
     git_sha="$(git rev-parse --short HEAD)" # current commit git
 
     ssh -X pi@$line './start_one.sh' $1 $line $git_sha &  # first command is py file with task
-done < ./bots.txt
+done < $BOTS
 wait
