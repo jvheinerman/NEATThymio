@@ -69,8 +69,6 @@ class ForagingTask(TaskEvaluator):
         self.puckLostCounter = 0
         self.goalReachedWaiter = 0
         self.goalReachedCounter = 0
-        self.bools = [True]*3
-        self.boolCounter = 0
 
     """
         The _step function will only be called when the values from the camera are ready to be consumed. It will not
@@ -207,17 +205,18 @@ class ForagingTask(TaskEvaluator):
 
         if self.hasPuck:
             if self.camera.goal_reached(self.hasPuck, self.presence[2], MIN_GOAL_DIST):
-                self.bools[self.boolCounter] = False
-                self.boolCounter += 1
                 self.goalReachedWaiter += 1
-                self.checkForGoal()
+                if self.goalReachedWaiter == 3:
+                    self.goalReached = True
+                    self.goalReachedWaiter = 0
+                    self.conditionLock.acquire()
+                    self.presenceValuesReady = True
+                    self.conditionLock.notify()
+                    self.conditionLock.release()
+                    energy_delta = GOAL_REACHED_BONUS
 
-            elif self.presence[2] < 60:
-                self.goalReachedWaiter = 3
-                self.checkForGoal()
-
-            elif all(self.bools):
-                self.goalReachedWaiter = 0
+            else:
+                    self.goalReachedWaiter = 0
 
 
         print "E delta: %.2f\t" % energy_delta, "P goal: %.2f\t" % self.presence[2], "P puck: %.2f\t" %self.presence[0], "Puck: \t", self.hasPuck, "Goals: \t", self.goalReachedCounter
@@ -225,20 +224,6 @@ class ForagingTask(TaskEvaluator):
         #" prox penalties: ", [prox_penalty_front, prox_penalty_back], " goals reached", self.goalReachedCounter
 
         return energy_delta
-
-    def checkForGoal(self):
-
-        if self.goalReachedWaiter == 3:
-            self.bools = [True] * 3
-            self.boolCounter = 0
-            self.goalReached = True
-            self.goalReachedWaiter = 0
-            self.conditionLock.acquire()
-            self.presenceValuesReady = True
-            self.conditionLock.notify()
-            self.conditionLock.release()
-            self.hasPuck = False
-            energy_delta = GOAL_REACHED_BONUS
 
     def goal_reach_camera_callback(self, presence):
         print("new presence values goal reached callback: ", presence)
