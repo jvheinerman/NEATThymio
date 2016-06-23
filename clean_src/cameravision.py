@@ -39,20 +39,23 @@ class CameraVision(threading.Thread):
 
         #define color ranges
 
-        self.blue_lower_bgr = np.array([35, 0, 0])
+        self.blue_lower_bgr = np.array([60, 0, 0])
         self.blue_upper_bgr = np.array([255, 60, 40])
 
+        self.blue_dark_lower_bgr = np.array([30, 0, 0])
+        self.blue_dark_upper_bgr = np.array([255, 33, 23])
+
         self.green_lower_bgr = np.array([0, 70, 0])
-        self.green_upper_bgr = np.array([75, 255, 70])
+        self.green_upper_bgr = np.array([60, 255, 60])
 
         self.green_lower_dark_bgr = np.array([0, 30, 0])
         self.green_upper_dark_bgr = np.array([20, 255, 38])
 
-        self.green_lower_light_bgr = np.array([0, 150, 0])
-        self.green_upper_light_bgr = np.array([113, 255, 133])
+        self.green_lower_light_bgr = np.array([0, 88, 0])
+        self.green_upper_light_bgr = np.array([65, 255, 65])
 
-        self.green_lower_superlight_bgr = np.array([0, 200, 0])
-        self.green_upper_superlight_bgr = np.array([140, 255, 155])
+        self.green_lower_superlight_bgr = np.array([0, 150, 0])
+        self.green_upper_superlight_bgr = np.array([113, 255, 133])
 
     def stop(self):
         self.__isStopped.set()
@@ -173,16 +176,19 @@ class CameraVision(threading.Thread):
 
         # combine the presence of lighter and darker color ranges for closer and more distant objects
         self.presence = self.retContours(self.green_lower_bgr, self.green_upper_bgr, image_total, 1)
-        # print "presence normal: ", self.presence
+        print "presence normal: ", self.presence
         prescenceDark = self.retContours(self.green_lower_dark_bgr, self.green_upper_dark_bgr, image_total, 1)
-        # print "presence dark: " , prescenceDark
+        print "presence dark: " , prescenceDark
         presenceLight = self.retContours(self.green_lower_light_bgr, self.green_upper_light_bgr, image_total, 1)
         # print "presence light ", presenceLight
         presenceSuperlight = self.retContours(self.green_lower_superlight_bgr, self.green_upper_superlight_bgr, image_total, 1)
         # print "presence super light: ", presenceSuperlight
         self.presence = ((np.array(self.presence) + np.array(prescenceDark) + np.array(presenceLight) +
                           np.array(presenceSuperlight)) / 4).tolist()
+
         self.presenceGoal = self.retContours(self.blue_lower_bgr, self.blue_upper_bgr, image_total, 1)
+        presenceGoalDark = self.retContours(self.blue_dark_lower_bgr, self.blue_dark_upper_bgr, image_total, 1)
+        self.presenceGoal = ((np.array(self.presenceGoal) + np.array(presenceGoalDark)) / 2).tolist()
 
         callback({'puck': self.presence, 'target': self.presenceGoal})
 
@@ -327,7 +333,9 @@ class CameraVisionVectors(CameraVision):
             mask_lighter = cv2.inRange(self.image, self.green_lower_superlight_bgr, self.green_upper_superlight_bgr)
             return cv2.bitwise_or(cv2.bitwise_or(mask_dark, mask), cv2.bitwise_or(mask_light, mask_lighter))
         else:
-            return cv2.inRange(self.image, self.blue_lower_bgr, self.blue_upper_bgr)
+            mask_dark = cv2.inRange(self.image, self.blue_dark_lower_bgr, self.blue_dark_upper_bgr)
+            mask = cv2.inRange(self.image, self.blue_dark_lower_bgr, self.blue_dark_upper_bgr)
+            return cv2.bitwise_or(mask, mask_dark)
 
     def img_to_vector(self, binary, check_puck=False):
 
@@ -381,11 +389,11 @@ class CameraVisionVectors(CameraVision):
             print("Camera exception: " + str(e) + str(
                 sys.exc_info()[0]) + ' - ' + traceback.format_exc())
         except (KeyboardInterrupt, SystemExit):
-            self.error_callback()
+            self.error_callback(None)
             raise
 
 if __name__ == "__main__":
-    cameravission = CameraVisionVectors(False, None)
+    cameravission = CameraVision(False, None)
 
     def camera_callback(values):
         print "new values: ", values

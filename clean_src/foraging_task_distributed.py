@@ -31,8 +31,8 @@ TARGET_SPECIES = 2
 SOLVED_AT = EVALUATIONS * 2
 EXPERIMENT_NAME = 'NEAT_foraging_task'
 
-INITIAL_ENERGY = 100
-MAX_ENERGY = 200
+INITIAL_ENERGY = 750
+MAX_ENERGY = 1500
 ENERGY_DECAY = 5
 MAX_STEPS = 200
 EXPECTED_FPS = 4
@@ -275,7 +275,10 @@ class ForagingTask(TaskEvaluator):
         self.energy = INITIAL_ENERGY
         self.fitness = 0
         self.presence = self.prev_presence = (None, None)
+        gobject.threads_init()
+        dbus.mainloop.glib.threads_init()
         self.loop = gobject.MainLoop()
+
         def update_energy(task, energy):
             task.energy += energy
 
@@ -337,6 +340,7 @@ class ForagingTask(TaskEvaluator):
             self.cameraWait()
             return True
         gobject.timeout_add(int(self.timeStep * 1000), lambda: main_lambda(self))
+
 
         print 'Starting loop...'
         self.loop.run()
@@ -512,6 +516,7 @@ if __name__ == '__main__':
         log['generations'].append(generation)
 
         task.getLogger().info(', '.join([str(ind.stats['fitness']) for ind in population.population]))
+        task.getLogger().info('goal reached counter: ', task.goalReachedCounter)
         jsonLog = open(task.jsonLogFilename, "w")
         json.dump(log, jsonLog)
         jsonLog.close()

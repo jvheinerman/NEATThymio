@@ -200,6 +200,8 @@ if __name__ == '__main__':
         generation['species'] = [len(species.members) for species in population.species]
         log['generations'].append(generation)
         task.getLogger().info(', '.join([str(ind.stats['fitness']) for ind in population.population]))
+        task.getLogger().info('hit the wall: ', task.hitWallCounter, ' times')
+        task.hitWallCounter = 0
         jsonLog = open(task.jsonLogFilename, "w")
         json.dump(log, jsonLog)
         jsonLog.close()
