@@ -37,8 +37,8 @@ class ThymioStreamer(BaseHTTPServer.BaseHTTPRequestHandler):
         s.wfile.write("<div class='container-fluid'><div class='row'>")
         for bot in f:
             if bot.startswith("192"):
-                s.wfile.write("<div class='col-xs-5'><h3>{0}</h3><img style='width: 100%; border: 5px solid #444' class='img-responsive' src='http://{0}:31337' />".format(bot[:-1]))
-                s.wfile.write("<div class='col-xs-1'></div>")
+                s.wfile.write("<div class='col-xs-10'><h3>{0}</h3><img style='width: 100%; border: 5px solid #444' class='img-responsive' src='http://{0}:31337' />".format(bot[:-1]))
+                s.wfile.write("</div><div class='col-xs-1'></div>")
         s.wfile.write("</div></div></body></html>")
 
 if __name__ == '__main__':

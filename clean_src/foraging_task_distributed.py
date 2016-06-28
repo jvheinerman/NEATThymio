@@ -25,11 +25,11 @@ EVALUATIONS = 1000
 MAX_MOTOR_SPEED = 150
 TIME_STEP = 0.005
 ACTIVATION_FUNC = 'tanh'
-POPSIZE = 10
+POPSIZE = 30
 GENERATIONS = 100
 TARGET_SPECIES = 2
 SOLVED_AT = EVALUATIONS * 2
-EXPERIMENT_NAME = 'NEAT_foraging_task'
+EXPERIMENT_NAME = 'NEAT_foraging_task_distributed_large'
 
 INITIAL_ENERGY = 750
 MAX_ENERGY = 1500
@@ -41,7 +41,8 @@ PUCK_BONUS_SCALE = 1
 GOAL_BONUS_SCALE = 2
 GOAL_REACHED_BONUS = INITIAL_ENERGY
 BACKWARD_PUNISH_SCALE = 10
-ANGLE_PENALTY = 1
+TURN_AWAY_PUNISH_SCALE = 10
+ANGLE_PENALTY = 3
 
 CURRENT_FILE_PATH = os.path.abspath(os.path.dirname(__file__))
 AESL_PATH = os.path.join(CURRENT_FILE_PATH, 'asebaCommands.aesl')
@@ -148,46 +149,43 @@ class ForagingTask(TaskEvaluator):
         prox_penalty_back = (self.proxvalues[1] + 1) * 10
 
         if self.hasPuck:
-            #use prev angle in calculation: 1 -> minimal influence distance, 0 -> maximum influence distance
+            # test to see if the robot turned away from the goal.
+            prev_saw_goal = self.prev_presence[2] is not self.camera.MAX_DISTANCE and \
+                self.presence[2] is self.camera.MAX_DISTANCE
 
+            # use prev angle in calculation: -1 -> minimal influence distance, 1 -> maximum influence distance
             angle_goal_diff = abs(self.prev_presence[3]) - abs(self.presence[3])
+
+            turn_away_punishment = 0
+            if prev_saw_goal:
+                turn_away_punishment = TURN_AWAY_PUNISH_SCALE
+                print "punishing for turning away, angle difference = ", angle_goal_diff
+
             delta_goal_distance = (abs(self.prev_presence[2]) - abs(self.presence[2]))
             if abs(delta_goal_distance) > 60:
                 delta_goal_distance = 10
 
-
-            # if (abs(angle_goal_diff)) < 0.1 and 2 < delta_goal_distance < 60:
-            #     delta_goal_distance = 10
-            #     angle_goal_diff = 5
-            #     prox_penalty_back = prox_penalty_front = 0
-            # elif (abs(angle_goal_diff)) < 0.1 and delta_goal_distance > 60:
-            #     delta_goal_distance *= 0.2
-            #     prox_penalty_back = prox_penalty_front = 0
-            # elif 0 < delta_goal_distance < 2:
-            #     delta_goal_distance = 0
-            #     angle_goal_diff = 0
-            # else:
-            #     delta_goal_distance = -1
-            #     angle_goal_diff = -1
-
-
-            energy_delta = GOAL_BONUS_SCALE * delta_goal_distance + ANGLE_PENALTY * angle_goal_diff
+            energy_delta = GOAL_BONUS_SCALE * delta_goal_distance + ANGLE_PENALTY * angle_goal_diff \
+                           - turn_away_punishment
 
         else:
             delta_puck_distance = (abs(self.prev_presence[0]) - abs(self.presence[0]))
             angle_puck_diff = abs(self.prev_presence[1]) - abs(self.presence[1])
 
+            prev_saw_puck = self.prev_presence[0] is not self.camera.MAX_DISTANCE and \
+                            self.presence[0] is self.camera.MAX_DISTANCE
+
+            turn_away_punishment = 0
+            if prev_saw_puck:
+                turn_away_punishment = TURN_AWAY_PUNISH_SCALE
+                print "punishing for turning away, angle difference = ", angle_puck_diff
+
             if abs(delta_puck_distance) > 60:
                 delta_puck_distance = 10
             if angle_puck_diff < 0:
                 angle_puck_diff *= 2
-            energy_delta = PUCK_BONUS_SCALE * delta_puck_distance + ANGLE_PENALTY * angle_puck_diff
 
-        # print "Goal Distance Bonuns:", (GOAL_BONUS_SCALE * delta_goal_distance), "Goal Angle Bonus: ", (ANGLE_PENALTY * angle_goal_diff)
-        # print "self.presence 0:", self.presence[0]
-        # print "self.presence 1:", self.presence[1]
-        # print "self.presence 2:", self.presence[2]
-        # print "self.presence 3:", self.presence[3]
+            energy_delta = PUCK_BONUS_SCALE * delta_puck_distance + ANGLE_PENALTY * angle_puck_diff - turn_away_punishment
 
         energy_delta = energy_delta - prox_penalty_front - prox_penalty_back
 
@@ -206,17 +204,11 @@ class ForagingTask(TaskEvaluator):
         if self.hasPuck:
             if self.camera.goal_reached(self.hasPuck, self.presence[2], MIN_GOAL_DIST):
                 self.goalReachedWaiter += 1
-                if self.goalReachedWaiter == 3:
-                    self.goalReached = True
-                    self.goalReachedWaiter = 0
-                    self.conditionLock.acquire()
-                    self.presenceValuesReady = True
-                    self.conditionLock.notify()
-                    self.conditionLock.release()
-                    energy_delta = GOAL_REACHED_BONUS
+                energy_delta = self.checkForGoal()
 
             else:
-                    self.goalReachedWaiter = 0
+                if not self.goalReachedWaiter == 0:
+                    self.goalReachedWaiter -= 1
 
 
         print "E delta: %.2f\t" % energy_delta, "P goal: %.2f\t" % self.presence[2], "P puck: %.2f\t" %self.presence[0], "Puck: \t", self.hasPuck, "Goals: \t", self.goalReachedCounter
@@ -237,6 +229,19 @@ class ForagingTask(TaskEvaluator):
         self.presenceValuesReady = True
         self.conditionLock.notify()
         self.conditionLock.release()
+
+    def checkForGoal(self):
+        if self.goalReachedWaiter == 3:
+            self.goalReached = True
+            self.goalReachedWaiter = 0
+            self.conditionLock.acquire()
+            self.presenceValuesReady = True
+            self.conditionLock.notify()
+            self.conditionLock.release()
+            self.hasPuck = False
+            return GOAL_REACHED_BONUS
+        else:
+            return 0
 
     def cameraCallback(self, evaluee, callback, presenceValues):
         #activate the main thread waiting for camera input

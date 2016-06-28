@@ -5,6 +5,7 @@ from parameters import *
 # from neat_task import NEATTask
 import numpy as np
 import dbus
+import time
 import dbus.mainloop.glib
 import logging
 import parameters as pr
@@ -24,7 +25,7 @@ POPSIZE = 10
 GENERATIONS = 30
 TARGET_SPECIES = 2
 SOLVED_AT = EVALUATIONS * 2
-EXPERIMENT_NAME = 'NEAT_obstacle_avoidance_distributed'
+EXPERIMENT_NAME = 'NEAT_obstacle_avoidance_distributed_ar_dif'
 
 CURRENT_FILE_PATH = os.path.abspath(os.path.dirname(__file__))
 MAIN_LOG_PATH = os.path.join(CURRENT_FILE_PATH, 'log_main')
@@ -41,6 +42,7 @@ class ObstacleAvoidance(TaskEvaluator):
         self.ctrl_thread_started = False
         self.hitWallCounter = 0
         self.atWall = False
+        self.log_wall_counter(experimentName)
         print "New obstacle avoidance task"
 
     def evaluate(self, evaluee):
@@ -49,7 +51,31 @@ class ObstacleAvoidance(TaskEvaluator):
             thread.start_new_thread(check_stop, (self, ))
             self.ctrl_thread_started = True
 
-        return TaskEvaluator.evaluate(self, evaluee)
+        result = TaskEvaluator.evaluate(self, evaluee)
+        self.write_wall_log()
+        self.hitWallCounter = 0
+        self.atWall = False
+        return result
+
+    def log_wall_counter(self, experimentName):
+        self.wall_logger = logging.getLogger('wallLogger')
+        self.wall_logger.setLevel(logging.INFO)
+        outputDir = os.path.join(OUTPUT_PATH, experimentName + "_wall_counter")
+        mkdir_p(outputDir)
+        mkdir_p(PICKLED_DIR)
+        date = time.strftime("%d-%m-%y_%H-%M")
+        self.jsonLogFilename_wall = os.path.join(outputDir, experimentName + '_' + date + '.json')
+
+    def write_wall_log(self):
+        wall_log = {'ind': {}}
+        wall_log['ind'] = {
+            "pop_size": self.popSize,
+            "eveluations_taken": self.evaluations_taken,
+            "wall_counter": self.hitWallCounter
+        }
+        jsonLog = open(self.jsonLogFilename_wall, "a")
+        json.dump(wall_log, jsonLog)
+        jsonLog.close()
 
     def _step(self, evaluee, callback):
         def ok_call(psValues):
@@ -62,12 +88,12 @@ class ObstacleAvoidance(TaskEvaluator):
             except Exception as e:
                 print str(e)
 
-            if not self.atWall and SENSOR_MAX in psValues:
+            # print "Sensor values: ", psValues, " sensor max: ", SENSOR_MAX
+            if not self.atWall and any(i >= 1 for i in psValues[0:5]):
                 self.atWall = True
                 self.hitWallCounter += 1
-            elif SENSOR_MAX not in psValues:
+            elif not any(i >= 1 for i in psValues[0:5]):
                 self.atWall = False
-
 
             callback(self.getFitness(motorspeed, psValues))
 
