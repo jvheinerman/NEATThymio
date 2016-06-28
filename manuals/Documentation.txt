@@ -1,3 +1,5 @@
+	
+	
 	Thymio Project Documentation
 	
 		A total beginners guide to the galaxy
@@ -11,6 +13,8 @@
 		3.	Executing Scripts
 		4.	Synchronizing files
 		5.	Clean Install (Setting up a Thymio-Pi combination from scratch)
+		6.	Setting up PI Wifi
+		7.	Using the logs
 
 		
 	0. Format
@@ -129,7 +133,7 @@
 		e.g.	~/test.txt
 		
 		4.	Rsync it from the PI
-		cmd	rsync pi@192.186.1.72:~/test.txt /home/user/
+		cmd	rsync pi@192.168.1.72:~/test.txt /home/user/
 
 		Bonus	Folder instead of single file
 		cmd	./* for current folder
@@ -147,9 +151,12 @@
 			
 		4. 	Stick it, the sd that is, in your PI
 		
+			X.	Find the correct IP address of the PI
+			cmd	nmap -sn 192.168.1.0-255
+		
 		5.	Install the needed packages on your pi
 		cmd		sudo apt-get update
-		cmd 	sudo apt-get rsync python-opencv python-numpy python-dbus python-gobject python-picamera dbus dbus-x11
+		cmd 	sudo apt-get install rsync python-opencv python-numpy python-dbus python-gobject python-picamera dbus dbus-x11
 		cmd		sudo apt-get install libboost-dev libqt4-dev qt4-dev-tools libqwt5-qt4-dev libudev-dev cmake g++ git make
 		!!!		If the last one does not work try the following commands followed by the above install again
 		cmd		sudo apt-get clean
@@ -166,6 +173,81 @@
 		9.	??? 
 		
 		10.	Profit
+		
+	6.	Setup PI Wifi
+	
+		1.	Stick a ETHERNET cable in your PI
+		
+		2.	Find the correct IP address of the PI
+		cmd	nmap -sn 192.168.1.0-255
+		
+		3.	SSH with your PI
+		
+		4.	Nano this file 
+		cmd nano /etc/network/interfaces
+		
+		5.	Replace file content with the following
+		
+			auto wlan0
+
+			auto lo
+
+			iface lo inet loopback
+			iface eth0 inet dhcp
+
+			allow-hotplug wlan0
+			iface wlan0 inet static
+			address 192.168.1.XX
+			netmask 255.255.255.0
+			gateway 192.168.1.1
+			dns-nameservers 8.8.8.8
+			wpa-conf /etc/wpa_supplicant/wpa_supplicant.conf
+			iface default inet dhcp
+		
+		!!	REPLACE THE XX WITH YOUR DESIRED IP ADDRESS
+		
+		6.	Nano this file
+		cmd nano /etc/wpa_supplicant/wpa_supplicant.conf
+		
+		7. Replace file content with the following
+
+			ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
+			update_config=1
+
+			network={
+					ssid="ThymioNet"
+					psk="172luckytulip75B"
+					proto=RSN
+					key_mgmt=WPA-PSK
+					pairwise=CCMP
+					auth_alg=OPEN
+			}
+			
+	7.	Using the logs
+	
+		1.	Go the log directory of your NEATThymio map
+		
+		2.	Change bots.txt to include the IP of the PI you want the logs off
+		!!	Can be multiple IP's
+		
+		3.	Run get_logs.sh locally
+		cmd	./get_logs.sh bots.txt
+		
+		4.	You will get an error that a map does not exist
+		
+		5.	Create that map locally
+		
+		6.	Do point 3 again
+		
+		7. Either create csv files or visual representations of each NN with
+		
+			1.	Get the .json file you want
+			2.	Put it in the same directory as export_data.py or Neural_net_vis.py
+			cmd	python export_data FILE.json 
+
+		
+		
+
 		
 	
 	
