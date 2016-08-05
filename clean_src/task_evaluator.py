@@ -26,7 +26,8 @@ class TaskEvaluator:
         #simHandler.setFormatter(FORMATTER)
         #self.logger.addHandler(simHandler)
 
-        self.jsonLogFilename = os.path.join(outputDir, experimentName + '_' + commit_sha + '.json')
+        date = time.strftime("%d-%m-%y_%H-%M")
+        self.jsonLogFilename = os.path.join(outputDir, experimentName + '_' + date + '.json')
 
         self.evaluations = evaluations
         self.timeStep = timeStep
@@ -48,7 +49,7 @@ class TaskEvaluator:
             if task.evaluations_taken == self.evaluations:
                 stopThymio(self.thymioController)
                 task.loop.quit()
-                return False 
+                return False
             ret_value =  self._step(evaluee, lambda (fit): update_fitness(self, fit))
             task.evaluations_taken += 1
             # time.sleep(TIME_STEP)
@@ -81,4 +82,5 @@ class TaskEvaluator:
         print 'Exiting...'
         # sys.exit(value)
         self.loop.quit()
+        # cleanup_stop_thread()
         thread.interrupt_main()

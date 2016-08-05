@@ -1,21 +1,12 @@
 # -*- coding: utf-8 -*-
 
-from helpers import *
 from parameters import *
-from neat_task import NEATTask
-from CameraVision import *
-import classes as cl
-from peas.networks.rnn import NeuralNetwork
+# from neat_task import NEATTask
 
 import numpy as np
-import os
-import time
-import gobject
-import glib
 import dbus
 import dbus.mainloop.glib
 import logging
-import pickle
 import parameters as pr
 from helpers import *
 from task_evaluator import TaskEvaluator
@@ -48,10 +39,13 @@ class ObstacleAvoidance(TaskEvaluator):
     def __init__(self, thymioController, commit_sha, debug=False, experimentName=EXPERIMENT_NAME, evaluations=1000, timeStep=0.005, activationFunction='tanh', popSize=1, generations=100, solvedAt=1000):
         TaskEvaluator.__init__(self, thymioController, commit_sha, debug, experimentName, evaluations, timeStep, activationFunction, popSize, generations, solvedAt)
         self.ctrl_thread_started = False
-    
+        self.hitWallCounter = 0
+        self.atWall = False
+        print "New obstacle avoidance task"
 
     def evaluate(self, evaluee):
         global ctrl_client
+        print "thread started:", self.ctrl_thread_started
         if ctrl_client and not self.ctrl_thread_started:
             thread.start_new_thread(check_stop, (self, ))
             self.ctrl_thread_started = True
@@ -63,10 +57,17 @@ class ObstacleAvoidance(TaskEvaluator):
             psValues = np.array([psValues[0], psValues[2], psValues[4], psValues[5], psValues[6], 1],dtype='f')
             psValues[0:5] = [(float(x) - float(pr.SENSOR_MAX[0]/2))/float(pr.SENSOR_MAX[0]/2) for x in psValues[0:5]]
             left, right = list(NeuralNetwork(evaluee).feed(psValues)[-2:])
-
             motorspeed = { 'left': left, 'right': right }
+            try:
+                writeMotorSpeed(self.thymioController, motorspeed)
+            except Exception as e:
+                print str(e)
 
-            writeMotorSpeed(self.thymioController, motorspeed)
+            if not self.atWall & SENSOR_MAX in psValues:
+                self.atWall = True
+                self.hitWallCounter += 1
+            elif SENSOR_MAX not in psValues:
+                self.atWall = False
 
             callback(self.getFitness(motorspeed, psValues))
 
@@ -78,12 +79,13 @@ class ObstacleAvoidance(TaskEvaluator):
 
     def getFitness(self, motorspeed, observation):
         # Calculate penalty for rotating
-        speedpenalty = 0
-        if motorspeed['left'] > motorspeed['right']:
-            speedpenalty = float((motorspeed['left'] - motorspeed['right']))
-        else:
-            speedpenalty = float((motorspeed['right'] - motorspeed['left']))
-    
+        # speedpenalty = 0
+        # if motorspeed['left'] > motorspeed['right']:
+        #     speedpenalty = float((motorspeed['left'] - motorspeed['right']))
+        # else:
+        #     speedpenalty = float((motorspeed['right'] - motorspeed['left']))
+
+        speedpenalty = float(abs(motorspeed['left'] - motorspeed['right']))
 
         # Calculate normalized distance to the nearest object
         sensorpenalty = 0
@@ -102,8 +104,10 @@ def check_stop(task):
     f = ctrl_client.makefile()
     line = f.readline()
     if line.startswith('stop'):
+        print "stopping"
         release_resources(task.thymioController)
         task.exit(0)
+        task.loop.quit()
         sys.exit(1)
     task.ctrl_thread_started = False
 
@@ -192,7 +196,6 @@ if __name__ == '__main__':
         #generation['champion_file'] = champion_file
         generation['species'] = [len(species.members) for species in population.species]
         log['generations'].append(generation)
-
         task.getLogger().info(', '.join([str(ind.stats['fitness']) for ind in population.population]))
         jsonLog = open(task.jsonLogFilename, "w")
         json.dump(log, jsonLog)

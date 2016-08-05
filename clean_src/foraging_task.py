@@ -44,8 +44,10 @@ AESL_PATH = os.path.join(CURRENT_FILE_PATH, 'asebaCommands.aesl')
 
 class ForagingTask(TaskEvaluator):
 
-    def __init__(self, thymioController, commit_sha, debug=False, experimentName='NEAT_task', evaluations=1000, timeStep=0.005, activationFunction='tanh', popSize=1, generations=100, solvedAt=1000):
-        TaskEvaluator.__init__(self, thymioController, commit_sha, debug, experimentName, evaluations, timeStep, activationFunction, popSize, generations, solvedAt)
+    def __init__(self, thymioController, commit_sha, debug=False, experimentName='NEAT_task', evaluations=1000,
+                 timeStep=0.005, activationFunction='tanh', popSize=1, generations=100, solvedAt=1000):
+        TaskEvaluator.__init__(self, thymioController, commit_sha, debug, experimentName, evaluations, timeStep,
+                               activationFunction, popSize, generations, solvedAt)
         self.camera = CameraVisionVectors(False, self.logger)
         self.ctrl_thread_started = False
         self.img_thread_started = False
@@ -161,7 +163,7 @@ class ForagingTask(TaskEvaluator):
                     print 'Time exhausted'
 
                 return False
-            ret_value =  task._step(evaluee, lambda (energy): update_energy(task, energy))
+            ret_value = task._step(evaluee, lambda (energy): update_energy(task, energy))
             task.evaluations_taken += 1
             task.energy -= ENERGY_DECAY
             # time.sleep(TIME_STEP)
@@ -191,7 +193,7 @@ class ForagingTask(TaskEvaluator):
 
         self.individuals_evaluated += 1
 
-        return { 'fitness': fitness }
+        return {'fitness': fitness}
 
 
 def check_stop(task):

@@ -42,5 +42,3 @@ CURRENT_FILE_PATH = os.path.abspath(os.path.dirname(__file__))
 OUTPUT_PATH = os.path.join(CURRENT_FILE_PATH, 'output')
 PICKLED_DIR = os.path.join(CURRENT_FILE_PATH, 'pickled')
 FORMATTER = logging.Formatter('%(asctime)s - %(levelname)s: %(message)s')
-
-
