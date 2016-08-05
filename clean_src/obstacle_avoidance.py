@@ -48,6 +48,7 @@ class ObstacleAvoidance(TaskEvaluator):
     def __init__(self, thymioController, commit_sha, debug=False, experimentName=EXPERIMENT_NAME, evaluations=1000, timeStep=0.005, activationFunction='tanh', popSize=1, generations=100, solvedAt=1000):
         TaskEvaluator.__init__(self, thymioController, commit_sha, debug, experimentName, evaluations, timeStep, activationFunction, popSize, generations, solvedAt)
         self.ctrl_thread_started = False
+    
 
     def evaluate(self, evaluee):
         global ctrl_client
