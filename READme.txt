@@ -87,18 +87,18 @@ For questions you are welcome to contact j.v.heinerman@vu.nl
 		1.	Pick your local booting script
 		e.g.	start_one.sh
 		
-		2.	Execute the script you want from computer
+		2.	Execute the script
 		e.g.	foraging.py
 		cmd	./start_one.sh foraging.py 192.168.1.72 1
 		!!!	For a reason only god knows the above command requires 3 input parameters
 			so fill in your favorite integer after the IP address, above we used 1
-			* This is reserved for the gitversion but apparently this connection does not work at the moment
+			* This is reserved for the gitversion but apparently this connection does not work at the moment. Starting one robot this ways, you need to do ssh into the raspberry
 
 		Local Multiple
 		1.	Pick your local booting script
 		e.g.	start_all.sh
 		
-		2.	Open bot.txt (in /src)
+		2.	Open bots.txt (in /src)
 		
 		3.	Type in all IPs of PIs you want to start and make sure there is an empty line in the bottom
 		e.g.	192.168.1.52
