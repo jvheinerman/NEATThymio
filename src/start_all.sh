@@ -1,13 +1,24 @@
-#!/bin/sh
-python accept_output_file.py &
+#!/bin/bash
+
+if [ ! -z  $1 ]; then
+	BOTS=$1
+else
+	BOTS=./bots.txt
+fi
+
+#sync the clocks
+sh ./sync_all.sh $BOTS;
+
 while read line
 do
 	echo "STARTING $line"
-	if [ -n "$1" ]
-	then
-		python ./run_cmd.py $line 54321 --start --debug &
-	else
-		python ./run_cmd.py $line 54321 --start &
+
+    if [ ! -f "distances.p" ]; then # only if not existing
+		python dist_angle_matrices.py
 	fi
-done < ./bots.txt
+
+    git_sha="$(git rev-parse --short HEAD)" # current commit git
+
+    ssh -X pi@$line './start_one.sh' $1 $line $git_sha &  # first command is py file with task
+done < $BOTS
 wait

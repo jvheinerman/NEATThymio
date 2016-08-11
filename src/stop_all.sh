@@ -1,7 +1,8 @@
-#!/bin/sh
+#!/bin/bash
+
 while read line
 do
 	echo "STOPPING $line"
-	python ./run_cmd.py $line 54321 --stop &
-done <./bots.txt
+	{ echo "stop"; sleep 1; } | telnet $line 1337
+done < ./bots.txt
 wait
