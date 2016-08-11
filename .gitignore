@@ -14,7 +14,6 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
 lib64/
 parts/
 sdist/
@@ -65,14 +64,5 @@ distances.p
 srv_resources
 logs
 
-# TeX stuff
-article.aux
-article.bbl
-article.blg
-article.dvi
-article.pdf
-article.ps
-*.tex.swp
-
 # files subject to a lot of local change
-clean_src/bots.txt
+src/bots.txt
