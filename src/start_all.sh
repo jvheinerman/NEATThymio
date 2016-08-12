@@ -1,10 +1,6 @@
 #!/bin/bash
 
-if [ ! -z  $1 ]; then
-	BOTS=$1
-else
-	BOTS=./bots.txt
-fi
+BOTS=./bots.txt
 
 #sync the clocks
 sh ./sync_all.sh $BOTS;
