@@ -24,12 +24,9 @@ For questions you are welcome to contact j.v.heinerman@vu.nl
 		1.	All points are explained in a sequential matter 
 		e.g.	1,2,3
 
-		2.	Abbriviasions used are
-			e.g.	-	Which stands for exempli gratiā and is a fancy word for 'for example'
+		2.	Abbreviations used are
 			cmd	-	Stands for command, this is followed by a terminal command
 			pwd	-	Means password
-			!!!	-	As I'm sure you don't know this stands for PAY ATTENTION and 
-					is usually followed by crucial information or a joke
 			PI	-	Short for Raspberry PI
 
 	1. Setting Up
@@ -92,7 +89,7 @@ For questions you are welcome to contact j.v.heinerman@vu.nl
 		cmd	./start_one.sh foraging.py 192.168.1.72 1
 		!!!	For a reason only god knows the above command requires 3 input parameters
 			so fill in your favorite integer after the IP address, above we used 1
-			* This is reserved for the gitversion but apparently this connection does not work at the moment. Starting one robot this ways, you need to do ssh into the raspberry
+			* This is reserved for the gitversion but apparently this connection does not work at the moment. Starting one robot this way, you need to do ssh into the raspberry
 
 		Local Multiple
 		1.	Pick your local booting script
@@ -109,9 +106,6 @@ For questions you are welcome to contact j.v.heinerman@vu.nl
 		e.g.	foraging.py
 		cmd	./start_all.sh foraging.py
 
-
-		Other Ways
-		1.	Good luck
 
 	4. Synchronize 
 
@@ -150,7 +144,7 @@ For questions you are welcome to contact j.v.heinerman@vu.nl
 		1. 	Get an SD-card
 			Preferably 8GB or more
 			
-		2. 	Format it
+		2. 	Format it to FAT32
 			
 		3. 	Install Raspbian on it
 			https://www.raspberrypi.org/documentation/installation/installing-images/
@@ -162,13 +156,13 @@ For questions you are welcome to contact j.v.heinerman@vu.nl
 		
 		5.	Install the needed packages on your pi
 		cmd		sudo apt-get update
-		cmd 	sudo apt-get install rsync python-opencv python-numpy python-dbus python-gobject python-picamera dbus dbus-x11
+		cmd 		sudo apt-get install rsync python-opencv python-numpy python-dbus python-gobject python-picamera dbus dbus-x11
 		cmd		sudo apt-get install libboost-dev libqt4-dev qt4-dev-tools libqwt5-qt4-dev libudev-dev cmake g++ git make
 		!!!		If the last one does not work try the following commands followed by the above install again
 		cmd		sudo apt-get clean
 		cmd		sudo apt-get -f install
 		
-		6.  Download the Aseba images
+		6.  	Download the Aseba images
 			https://www.thymio.org/local--files/en:linuxinstall/aseba_1.4.0_armhf.deb
 			
 		7.	Rsync the .deb file to your pi
@@ -176,9 +170,7 @@ For questions you are welcome to contact j.v.heinerman@vu.nl
 		8. 	Run the following command
 			1.	sudo dpkg -i aseba_1.4.0_armhf.deb
 			
-		9.	??? 
-		
-		10.	Profit
+
 		
 	6.	Setup PI Wifi
 	

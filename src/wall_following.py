@@ -24,7 +24,7 @@ POPSIZE = 10
 GENERATIONS = 30
 TARGET_SPECIES = 2
 SOLVED_AT = EVALUATIONS * 2
-EXPERIMENT_NAME = 'NEAT_obstacle_avoidance_3_arena_0'
+EXPERIMENT_NAME = 'NEAT_wall_following'
 
 CURRENT_FILE_PATH = os.path.abspath(os.path.dirname(__file__))
 MAIN_LOG_PATH = os.path.join(CURRENT_FILE_PATH, 'log_main')
@@ -41,7 +41,7 @@ class ObstacleAvoidance(TaskEvaluator):
         self.ctrl_thread_started = False
         self.hitWallCounter = 0
         self.atWall = False
-        print "New obstacle avoidance task"
+        print "New wall following task"
 
     def evaluate(self, evaluee):
         global ctrl_client
@@ -86,18 +86,10 @@ class ObstacleAvoidance(TaskEvaluator):
         # else:
         #     speedpenalty = float((motorspeed['right'] - motorspeed['left']))
 
-        speedpenalty = float(abs(motorspeed['left'] - motorspeed['right']))
-
-        # Calculate normalized distance to the nearest object
-        sensorpenalty = 0
-        for i, sensor in enumerate(observation[:-1]):
-            distance = sensor
-            if sensorpenalty < distance:
-                sensorpenalty = distance
 
 
         # fitness for 1 timestep in [-2, 2]
-        return float(motorspeed['left'] + motorspeed['right']) * (1 - min(speedpenalty,1)) * (1 - min(sensorpenalty,1))
+        return float(pow(motorspeed['left'] + motorspeed['right'],2) -  pow(1+observation[4],2) - pow(observation[0]-0.3,2))
 
 
 def check_stop(task):
