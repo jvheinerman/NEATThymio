@@ -48,6 +48,9 @@ def getProxReadings(controller, ok_callback, nok_callback):
 def getProxReadings(controller, ok_callback, nok_callback):
     controller.GetVariable("thymio-II", "prox.horizontal", reply_handler=ok_callback, error_handler=nok_callback)
 
+def getGroundReadings(controller, ok_callback, nok_callback):
+    controller.GetVariable("thymio-II", "prox.ground.reflected", reply_handler=ok_callback, error_handler=nok_callback)
+
 def stopThymio(controller):
     writeMotorSpeed(controller, { 'left': 0, 'right': 0 })
 

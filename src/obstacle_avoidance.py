@@ -7,6 +7,7 @@ import numpy as np
 import dbus
 import dbus.mainloop.glib
 import logging
+logging.basicConfig()
 import parameters as pr
 from helpers import *
 from task_evaluator import TaskEvaluator

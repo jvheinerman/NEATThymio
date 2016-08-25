@@ -77,6 +77,10 @@ class ObstacleAvoidance(TaskEvaluator):
 
         getProxReadings(self.thymioController, ok_call, nok_call)
         return True
+    
+
+    
+    
 
     def getFitness(self, motorspeed, observation):
         # Calculate penalty for rotating
@@ -85,7 +89,6 @@ class ObstacleAvoidance(TaskEvaluator):
         #     speedpenalty = float((motorspeed['left'] - motorspeed['right']))
         # else:
         #     speedpenalty = float((motorspeed['right'] - motorspeed['left']))
-
 
 
         # fitness for 1 timestep in [-2, 2]
