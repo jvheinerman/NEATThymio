@@ -19,7 +19,7 @@ to the WiFi.
 
 Download the appropriate packages to execute and test the robots use
 
-    git clone https://github.com/jvheinerman/NEATThymio.git
+    git clone https://github.com/ci-group/NEATThymio.git
 
 ## Logging In
 
